@@ -746,6 +746,7 @@ var users = [];
 var groups = [];
 var templates = [];
 var subtasks = [];
+var stContributorsState = {}; // sélections de contributeurs en cours d'édition, par sous-tâche
 var dependencies = [];
 var comments = [];
 var timeEntries = [];
@@ -6743,17 +6744,11 @@ function openEditTaskModal(taskId, preserveAssignees) {
       html += '<div class="st-pill-label">' + t('subtaskAssignee') + '</div>';
       html += assigneeListHtml;
       html += '</div>';
-      // Contributeurs (sélection multiple)
-      var stContributors = (st.Contributors || '').split(',').map(function(a) { return a.trim(); }).filter(Boolean);
+      // Contributeurs (sélection multiple, liste déroulante à cases à cocher)
+      stContributorsState[st.id] = (st.Contributors || '').split(',').map(function(a) { return a.trim(); }).filter(Boolean);
       html += '<div>';
       html += '<div class="st-pill-label">🤝 ' + t('subtaskContributors') + '</div>';
-      html += '<input type="text" class="st-multi-search" id="st-contrib-search-' + st.id + '" placeholder="' + (currentLang === 'fr' ? '🔍 Rechercher un membre...' : '🔍 Search a member...') + '" autocomplete="off" oninput="filterStMulti(' + st.id + ',\'contrib\',this.value)">';
-      html += '<div class="st-multi-list" id="st-contrib-list-' + st.id + '">';
-      for (var cui = 0; cui < users.length; cui++) {
-        var cuName = users[cui].Name;
-        html += '<label class="st-multi-item"><input type="checkbox" value="' + sanitize(cuName) + '"' + (stContributors.indexOf(cuName) !== -1 ? ' checked' : '') + '> ' + sanitize(cuName) + '</label>';
-      }
-      html += '</div>';
+      html += '<div class="filter-combo st-contrib-combo" id="st-contrib-combo-' + st.id + '"></div>';
       html += '</div>';
       // Date + hours row
       html += '<div class="st-meta-row">';
@@ -7105,6 +7100,8 @@ function openEditTaskModal(taskId, preserveAssignees) {
   // D2 : remplir la liste des pièces jointes (token asynchrone à part)
   renderAttachmentsSection(task.id);
   taskSubtasks.forEach(function(st) { renderSubtaskAttachmentsSection(st.id); });
+  // Listes déroulantes à cases à cocher des contributeurs de chaque sous-tâche
+  taskSubtasks.forEach(function(st) { renderStContribCombo(st.id); });
 }
 
 // Suffixe de conteneur DOM pour un rôle RACI. editAssignees -> 'assignee' (et non
@@ -7662,14 +7659,102 @@ function setStPill(field, subtaskId, value, btn) {
   btn.className = 'st-pill active-' + value;
 }
 
-// Filtre les cases d'une liste multi-sélection de sous-tâche (contributeurs) par nom
-function filterStMulti(subtaskId, kind, query) {
-  var list = document.getElementById('st-' + kind + '-list-' + subtaskId);
+// --- Contributeurs d'une sous-tâche : liste déroulante à cases à cocher ---
+
+// Sélection en cours d'édition (sinon on retombe sur la valeur enregistrée)
+function getStContributors(subtaskId) {
+  if (stContributorsState[subtaskId]) return stContributorsState[subtaskId];
+  var st = subtasks.find(function(s) { return s.id === subtaskId; });
+  return (st && st.Contributors ? st.Contributors : '').split(',').map(function(a) { return a.trim(); }).filter(Boolean);
+}
+
+// Reconstruit le combo (bouton + dropdown à cases) ; l'état ouvert est préservé
+function renderStContribCombo(subtaskId) {
+  var box = document.getElementById('st-contrib-combo-' + subtaskId);
+  if (!box) return;
+  var selected = getStContributors(subtaskId);
+  var prevDd = document.getElementById('st-contrib-dd-' + subtaskId);
+  var wasOpen = prevDd && prevDd.classList.contains('show');
+  var placeholder = currentLang === 'fr' ? 'Sélectionner...' : 'Select...';
+  var labelText = selected.length === 0 ? placeholder : selected.join(', ');
+  var h = '<button type="button" class="filter-combo-btn st-contrib-btn' + (selected.length ? ' active' : '') + '" id="st-contrib-btn-' + subtaskId + '" onclick="toggleStContribCombo(' + subtaskId + ')">';
+  h += '<span class="filter-combo-label">' + sanitize(labelText) + '</span><span class="filter-combo-chevron">▾</span></button>';
+  h += '<div class="filter-combo-dd" id="st-contrib-dd-' + subtaskId + '">';
+  h += '<div class="filter-combo-search"><input type="text" id="st-contrib-search-' + subtaskId + '" placeholder="' + (currentLang === 'fr' ? 'Rechercher...' : 'Search...') + '" oninput="filterStContribCombo(' + subtaskId + ', this.value)" autocomplete="off"></div>';
+  h += '<div class="filter-combo-list" id="st-contrib-list-' + subtaskId + '">';
+  if (selected.length > 0) {
+    h += '<div class="filter-combo-opt" data-value="" data-label="' + (currentLang === 'fr' ? 'effacer' : 'clear') + '" style="color:#ef4444;font-weight:600;">✕ ' + (currentLang === 'fr' ? 'Effacer' : 'Clear') + '</div>';
+  }
+  users.forEach(function(u) {
+    var on = selected.indexOf(u.Name) !== -1;
+    h += '<div class="filter-combo-opt' + (on ? ' selected' : '') + '" data-value="' + sanitize(u.Name) + '" data-label="' + sanitize(u.Name) + '">';
+    h += '<span style="display:inline-block;width:16px;">' + (on ? '✓' : '') + '</span>' + sanitize(u.Name) + '</div>';
+  });
+  h += '</div></div>';
+  h += '<input type="hidden" id="st-contributors-' + subtaskId + '" value="' + sanitize(selected.join(', ')) + '">';
+  box.innerHTML = h;
+  // Clic sur une option : délégation, la valeur est lue via getAttribute (dé-échappée
+  // par le navigateur) — aucun échappement inline à gérer pour les noms avec apostrophe
+  var list = document.getElementById('st-contrib-list-' + subtaskId);
+  if (list) {
+    list.querySelectorAll('.filter-combo-opt').forEach(function(opt) {
+      opt.addEventListener('click', function() {
+        var v = opt.getAttribute('data-value') || '';
+        if (v === '') {
+          stContributorsState[subtaskId] = [];
+        } else {
+          var arr = getStContributors(subtaskId).slice();
+          var i = arr.indexOf(v);
+          if (i === -1) arr.push(v); else arr.splice(i, 1);
+          stContributorsState[subtaskId] = arr;
+        }
+        renderStContribCombo(subtaskId);
+      });
+    });
+  }
+  if (wasOpen) {
+    var dd = document.getElementById('st-contrib-dd-' + subtaskId);
+    var btn = document.getElementById('st-contrib-btn-' + subtaskId);
+    if (dd) dd.classList.add('show');
+    if (btn) btn.classList.add('open');
+  }
+}
+
+function toggleStContribCombo(subtaskId) {
+  var dd = document.getElementById('st-contrib-dd-' + subtaskId);
+  var btn = document.getElementById('st-contrib-btn-' + subtaskId);
+  if (!dd) return;
+  var isOpen = dd.classList.contains('show');
+  document.querySelectorAll('.filter-combo-dd.show').forEach(function(d) { d.classList.remove('show'); });
+  document.querySelectorAll('.filter-combo-btn.open').forEach(function(b) { b.classList.remove('open'); });
+  if (!isOpen) {
+    dd.classList.add('show');
+    if (btn) btn.classList.add('open');
+    var inp = document.getElementById('st-contrib-search-' + subtaskId);
+    if (inp) { inp.value = ''; inp.focus(); filterStContribCombo(subtaskId, ''); }
+    setTimeout(function() {
+      document.addEventListener('mousedown', function hideSC(e) {
+        var box = document.getElementById('st-contrib-combo-' + subtaskId);
+        if (box && !box.contains(e.target)) {
+          var dd2 = document.getElementById('st-contrib-dd-' + subtaskId);
+          var btn2 = document.getElementById('st-contrib-btn-' + subtaskId);
+          if (dd2) dd2.classList.remove('show');
+          if (btn2) btn2.classList.remove('open');
+          document.removeEventListener('mousedown', hideSC);
+        }
+      });
+    }, 0);
+  }
+}
+
+// Filtre les options du dropdown contributeurs par nom
+function filterStContribCombo(subtaskId, query) {
+  var list = document.getElementById('st-contrib-list-' + subtaskId);
   if (!list) return;
-  var q = (query || '').toLowerCase();
-  list.querySelectorAll('.st-multi-item').forEach(function(lbl) {
-    var txt = (lbl.textContent || '').toLowerCase();
-    lbl.style.display = (!q || txt.indexOf(q) !== -1) ? '' : 'none';
+  var q = (query || '').trim().toLowerCase();
+  list.querySelectorAll('.filter-combo-opt').forEach(function(opt) {
+    var label = (opt.getAttribute('data-label') || '').toLowerCase();
+    opt.style.display = (!q || label.indexOf(q) !== -1) ? '' : 'none';
   });
 }
 
@@ -7703,11 +7788,11 @@ function snapshotSubtaskForm(subtaskId) {
       snap[pfx] = el.value;
     }
   });
-  // Contributeurs : cases à cocher, l'instantané mémorise les valeurs cochées
-  var snapContribList = document.getElementById('st-contrib-list-' + subtaskId);
-  if (snapContribList) {
+  // Contributeurs : l'instantané mémorise la sélection en cours (liste déroulante)
+  var snapContribHidden = document.getElementById('st-contributors-' + subtaskId);
+  if (snapContribHidden) {
     if (!snap) snap = {};
-    snap['st-contrib-list-'] = Array.prototype.map.call(snapContribList.querySelectorAll('input[type="checkbox"]:checked'), function(cb) { return cb.value; });
+    snap['st-contributors-'] = snapContribHidden.value;
   }
   return snap;
 }
@@ -7729,15 +7814,10 @@ function restoreSubtaskForm(subtaskId, snap) {
     var btn = grp ? grp.querySelector('[data-key="' + pair[1] + '"]') : null;
     if (btn) btn.click();
   });
-  // Contributeurs : recoche les cases correspondant à l'instantané
-  if (snap && snap['st-contrib-list-'] !== undefined) {
-    var rstContribList = document.getElementById('st-contrib-list-' + subtaskId);
-    if (rstContribList) {
-      var wantedContribs = snap['st-contrib-list-'];
-      rstContribList.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
-        cb.checked = wantedContribs.indexOf(cb.value) !== -1;
-      });
-    }
+  // Contributeurs : réapplique la sélection de l'instantané dans la liste déroulante
+  if (snap && snap['st-contributors-'] !== undefined) {
+    stContributorsState[subtaskId] = (snap['st-contributors-'] || '').split(',').map(function(a) { return a.trim(); }).filter(Boolean);
+    renderStContribCombo(subtaskId);
   }
   var dodInput = document.getElementById('st-dod-new-' + subtaskId);
   if (dodInput) dodInput.focus();
@@ -7749,7 +7829,7 @@ async function saveEditSubtask(subtaskId, parentTaskId) {
   var tagSel       = document.getElementById('st-tag-'     + subtaskId);
   var prioritySel   = document.getElementById('st-priority-' + subtaskId);
   var assigneeSel   = document.getElementById('st-assignee-' + subtaskId);
-  var contribList   = document.getElementById('st-contrib-list-' + subtaskId);
+  var contribHidden = document.getElementById('st-contributors-' + subtaskId);
   var startDateInput= document.getElementById('st-start-'    + subtaskId);
   var dueDateInput  = document.getElementById('st-due-'      + subtaskId);
   var hoursInput    = document.getElementById('st-hours-'    + subtaskId);
@@ -7757,10 +7837,7 @@ async function saveEditSubtask(subtaskId, parentTaskId) {
   var newTitle = titleInput.value.trim();
   if (!newTitle) return;
   var newAssignee = assigneeSel ? assigneeSel.value : '';
-  var newContributors = '';
-  if (contribList) {
-    newContributors = Array.prototype.map.call(contribList.querySelectorAll('input[type="checkbox"]:checked'), function(cb) { return cb.value; }).join(', ');
-  }
+  var newContributors = contribHidden ? contribHidden.value : '';
   var newStartDate = startDateInput && startDateInput.value ? Math.floor(new Date(startDateInput.value).getTime() / 1000) : null;
   var newDueDate = dueDateInput && dueDateInput.value ? Math.floor(new Date(dueDateInput.value).getTime() / 1000) : null;
   var typeEl = document.getElementById('st-type-' + subtaskId);
