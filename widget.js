@@ -258,18 +258,14 @@ var i18n = {
     hoursAgo: 'il y a {n}h',
     daysAgo: 'il y a {n}j',
     timeTracking: 'Suivi du temps',
-    startTimer: 'Démarrer',
-    stopTimer: 'Arrêter',
-    timerRunning: 'En cours...',
     totalTime: 'Temps total',
     estimatedTime: 'Temps estimé',
     timeEntries: 'Entrées de temps',
-    workloadPerPerson: 'Charge par personne (prévisionnel)',
+    workloadPerPerson: 'Charge par personne',
     workloadTaskLevel: 'Tâche',
-    workloadTotal: 'Total prévisionnel',
+    workloadTotal: 'Total',
     workloadNoPeople: 'Aucun responsable ni contributeur',
     noTimeEntries: 'Aucune entrée',
-    timeEntryAdded: 'Temps enregistré',
     timeEntryDeleted: 'Entrée supprimée',
     hours: 'h',
     minutes: 'min',
@@ -615,18 +611,14 @@ var i18n = {
     hoursAgo: '{n}h ago',
     daysAgo: '{n}d ago',
     timeTracking: 'Time Tracking',
-    startTimer: 'Start',
-    stopTimer: 'Stop',
-    timerRunning: 'Running...',
     totalTime: 'Total time',
     estimatedTime: 'Estimated time',
     timeEntries: 'Time entries',
-    workloadPerPerson: 'Planned workload per person',
+    workloadPerPerson: 'Workload per person',
     workloadTaskLevel: 'Task',
-    workloadTotal: 'Total planned',
+    workloadTotal: 'Total',
     workloadNoPeople: 'No assignee or contributor',
     noTimeEntries: 'No entries',
-    timeEntryAdded: 'Time recorded',
     timeEntryDeleted: 'Entry deleted',
     hours: 'h',
     minutes: 'min',
@@ -776,7 +768,6 @@ var currentFilterAssignee = null; // user Name
 var currentFilterCategory = null;
 var currentFilterTag = null;
 var mineOnly = false; // "Mes projets" : projets créés par moi OU où je suis assigné
-var activeTimers = {}; // taskId -> startTime (for running timers)
 var kanbanGroupBy = 'status'; // 'status' | 'priority' | 'project'
 var kanbanSort = 'manual'; // 'manual' | 'alpha' | 'alpha-desc' | 'due'
 var expandedKanbanCards = {}; // taskId -> true quand la tuile est dépliée (A2)
@@ -1708,10 +1699,6 @@ function getTaskTotalTime(taskId) {
   var total = 0;
   for (var i = 0; i < entries.length; i++) {
     total += entries[i].Duration || 0;
-  }
-  // Add running timer if active
-  if (activeTimers[taskId]) {
-    total += Math.floor(Date.now() / 1000) - activeTimers[taskId];
   }
   return total;
 }
@@ -4158,9 +4145,8 @@ function renderTaskCard(task) {
     html += '<span class="task-card-comments">💬 ' + taskComments.length + '</span>';
   }
   var totalTime = getTaskTotalTime(task.id);
-  var isTimerRunning = !!activeTimers[task.id];
-  if (cd.time && (totalTime > 0 || isTimerRunning)) {
-    html += '<span class="task-card-time' + (isTimerRunning ? ' timer-running' : '') + '">⏱️ ' + formatDurationShort(totalTime) + (isTimerRunning ? ' ●' : '') + '</span>';
+  if (cd.time && totalTime > 0) {
+    html += '<span class="task-card-time">⏱️ ' + formatDurationShort(totalTime) + '</span>';
   }
   if (task.Recurrence && task.Recurrence !== 'none') {
     var recLabel = recurrenceSymbol(task.Recurrence);
@@ -6891,27 +6877,9 @@ function openEditTaskModal(taskId, preserveAssignees) {
 
   // Time Tracking card
   var totalTime = getTaskTotalTime(task.id);
-  var isTimerRunning = !!activeTimers[task.id];
   var taskTimeEntries = getTaskTimeEntries(task.id);
   html += '<div class="detail-card time-card">';
   html += '<h4>⏱️ ' + t('timeTracking') + '</h4>';
-  
-  // Timer button
-  html += '<div class="timer-control">';
-  if (isTimerRunning) {
-    html += '<button class="timer-btn timer-stop" onclick="stopTimer(' + task.id + ')">⏹️ ' + t('stopTimer') + '</button>';
-    html += '<span class="timer-status running">● ' + t('timerRunning') + '</span>';
-  } else {
-    html += '<button class="timer-btn timer-start" onclick="startTimer(' + task.id + ')">▶️ ' + t('startTimer') + '</button>';
-  }
-  html += '</div>';
-  
-  // Manual time entry
-  html += '<div class="manual-time-entry" style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap;">';
-  html += '<input type="number" id="manual-hours" min="0" max="99" placeholder="0" style="width:52px;" class="form-input" title="' + (currentLang === 'fr' ? 'Heures' : 'Hours') + '"> h';
-  html += '<input type="number" id="manual-minutes" min="0" max="59" placeholder="0" style="width:52px;" class="form-input" title="' + (currentLang === 'fr' ? 'Minutes' : 'Minutes') + '"> min';
-  html += '<button class="btn btn-secondary btn-sm" onclick="addManualTimeEntry(' + task.id + ')">+ ' + (currentLang === 'fr' ? 'Ajouter' : 'Add') + '</button>';
-  html += '</div>';
 
   // Time summary
   html += '<div class="time-summary">';
@@ -6923,7 +6891,7 @@ function openEditTaskModal(taskId, preserveAssignees) {
   }
   html += '</div>';
   
-  // Charge prévisionnelle par personne (rendu après injection de la modale)
+  // Charge par personne (rendu après injection de la modale)
   html += '<div id="workload-section-' + task.id + '"></div>';
 
   // Recent time entries (newest first)
@@ -7134,7 +7102,7 @@ function openEditTaskModal(taskId, preserveAssignees) {
   taskSubtasks.forEach(function(st) { renderSubtaskAttachmentsSection(st.id); });
   // Listes déroulantes à cases à cocher des contributeurs de chaque sous-tâche
   taskSubtasks.forEach(function(st) { renderStContribCombo(st.id); });
-  // Charge prévisionnelle par personne (bloc suivi du temps)
+  // Charge par personne (bloc suivi du temps)
   renderWorkloadSection(task.id);
 }
 
@@ -8103,83 +8071,7 @@ async function deleteComment(commentId, taskId) {
 }
 
 // =============================================================================
-// TIME TRACKING
-// =============================================================================
-
-async function startTimer(taskId) {
-  var scrollPos = getModalScrollTop();
-  await persistTaskFormFields(taskId);   // A1 : ne pas perdre la saisie en cours
-  activeTimers[taskId] = Math.floor(Date.now() / 1000);
-  await loadAllData();
-  openEditTaskModal(taskId, true);
-  restoreModalScrollTop(scrollPos);      // A3
-}
-
-async function stopTimer(taskId) {
-  if (!activeTimers[taskId]) return;
-  
-  var startTime = activeTimers[taskId];
-  var endTime = Math.floor(Date.now() / 1000);
-  var duration = endTime - startTime;
-  var scrollPos = getModalScrollTop();
-  await persistTaskFormFields(taskId);   // A1
-
-  try {
-    await grist.docApi.applyUserActions([
-      ['AddRecord', TIME_ENTRIES_TABLE, null, {
-        Task_Id: taskId,
-        User: currentUserEmail || 'Utilisateur',
-        Start_Time: startTime,
-        End_Time: endTime,
-        Duration: duration,
-        Description: ''
-      }]
-    ]);
-    delete activeTimers[taskId];
-    showToast(t('timeEntryAdded'), 'success');
-    await loadAllData();
-    openEditTaskModal(taskId, true);
-    restoreModalScrollTop(scrollPos);    // A3
-  } catch (e) {
-    console.error('Error stopping timer:', e);
-    showToast('Error: ' + e.message, 'error');
-  }
-}
-
-async function addManualTimeEntry(taskId) {
-  var hours = parseInt(document.getElementById('manual-hours').value) || 0;
-  var minutes = parseInt(document.getElementById('manual-minutes').value) || 0;
-  var duration = hours * 3600 + minutes * 60;
-  if (duration <= 0) {
-    showToast(currentLang === 'fr' ? 'Entrez une durée valide' : 'Enter a valid duration', 'error');
-    return;
-  }
-  var now = Math.floor(Date.now() / 1000);
-  var scrollPos = getModalScrollTop();
-  await persistTaskFormFields(taskId);   // A1
-  try {
-    await grist.docApi.applyUserActions([
-      ['AddRecord', TIME_ENTRIES_TABLE, null, {
-        Task_Id: taskId,
-        User: currentUserEmail || 'Utilisateur',
-        Start_Time: now - duration,
-        End_Time: now,
-        Duration: duration,
-        Description: currentLang === 'fr' ? 'Saisie manuelle' : 'Manual entry'
-      }]
-    ]);
-    showToast(t('timeEntryAdded'), 'success');
-    await loadAllData();
-    openEditTaskModal(taskId, true);
-    restoreModalScrollTop(scrollPos);    // A3
-  } catch (e) {
-    console.error('Error adding manual time entry:', e);
-    showToast('Error: ' + e.message, 'error');
-  }
-}
-
-// =============================================================================
-// CHARGE PRÉVISIONNELLE PAR PERSONNE (bloc suivi du temps)
+// CHARGE PAR PERSONNE (bloc suivi du temps)
 // =============================================================================
 
 async function loadWorkloadEntries() {
@@ -8252,7 +8144,7 @@ function workloadRowHtml(taskId, subtaskId, person) {
 
 // Rend la section « charge par personne » de la carte suivi du temps :
 // un groupe pour la tâche (R + C), un groupe par sous-tâche (responsable + contributeurs),
-// et le total prévisionnel global.
+// et le total global.
 function renderWorkloadSection(taskId) {
   var container = document.getElementById('workload-section-' + taskId);
   if (!container) return;
