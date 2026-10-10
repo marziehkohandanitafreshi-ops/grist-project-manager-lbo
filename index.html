@@ -2638,6 +2638,36 @@
       cursor: pointer;
     }
     .st-dep-select:focus { border-color: #6366f1; }
+    .st-multi-search {
+      width: 100%;
+      padding: 5px 8px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: inherit;
+      margin-bottom: 4px;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .st-multi-search:focus { border-color: #6366f1; }
+    .st-multi-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+      max-height: 84px;
+      overflow-y: auto;
+      padding: 6px 8px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+    .st-multi-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
     .st-hours-input {
       width: 90px;
       padding: 7px 10px;
@@ -2684,6 +2714,8 @@
     body.dark-mode .subtask-edit-select,
     body.dark-mode .subtask-edit-date,
     body.dark-mode .st-dep-select { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+    body.dark-mode .st-multi-search { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+    body.dark-mode .st-multi-list { border-color: #334155; }
     body.dark-mode .st-hours-input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
     body.dark-mode .st-pill { border-color: #334155; color: #94a3b8; }
     body.dark-mode .st-pill:hover { border-color: #475569; color: #e2e8f0; }

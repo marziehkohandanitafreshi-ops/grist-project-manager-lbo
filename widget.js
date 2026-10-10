@@ -228,6 +228,7 @@ var i18n = {
     subtaskSaved: 'Sous-tâche modifiée',
     editSubtask: 'Modifier la sous-tâche',
     subtaskAssignee: 'Responsable',
+    subtaskContributors: 'Contributeurs',
     definitionOfDone: 'Definition of Done',
     addCriterion: 'Ajouter un critère',
     newCriterion: 'Nouveau critère',
@@ -577,6 +578,7 @@ var i18n = {
     subtaskSaved: 'Subtask updated',
     editSubtask: 'Edit subtask',
     subtaskAssignee: 'Assignee',
+    subtaskContributors: 'Contributors',
     definitionOfDone: 'Definition of Done',
     addCriterion: 'Add criterion',
     newCriterion: 'New criterion',
@@ -1936,6 +1938,7 @@ async function ensureTables() {
           { id: 'Status', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['todo', 'progress', 'done', 'archived'] }) },
           { id: 'Priority', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['high', 'medium', 'low'] }) },
           { id: 'Assignee', type: 'Text' },
+          { id: 'Contributors', type: 'Text' },
           { id: 'Tag', type: 'Text' },
           { id: 'Due_Date', type: 'Date' },
           { id: 'Estimated_Hours', type: 'Numeric' },
@@ -2260,6 +2263,9 @@ async function ensureTables() {
         if (stCols.indexOf('Assignee') === -1) {
           stActions.push(['AddColumn', SUBTASKS_TABLE, 'Assignee', { type: 'Text' }]);
         }
+        if (stCols.indexOf('Contributors') === -1) {
+          stActions.push(['AddColumn', SUBTASKS_TABLE, 'Contributors', { type: 'Text' }]);
+        }
         if (stCols.indexOf('Tag') === -1) {
           stActions.push(['AddColumn', SUBTASKS_TABLE, 'Tag', { type: 'Text' }]);
         }
@@ -2478,6 +2484,7 @@ async function loadAllData() {
           Order: subtaskData.Order ? subtaskData.Order[i] : 0,
           Blocked_By_Subtask_Id: subtaskData.Blocked_By_Subtask_Id ? subtaskData.Blocked_By_Subtask_Id[i] : null,
           Assignee: subtaskData.Assignee ? subtaskData.Assignee[i] : '',
+          Contributors: subtaskData.Contributors ? subtaskData.Contributors[i] : '',
           Tag: subtaskData.Tag ? subtaskData.Tag[i] : '',
           Due_Date: subtaskData.Due_Date ? subtaskData.Due_Date[i] : null,
           Start_Date: subtaskData.Start_Date ? subtaskData.Start_Date[i] : null,
@@ -6658,6 +6665,11 @@ function openEditTaskModal(taskId, preserveAssignees) {
           html += '<span class="subtask-assignee-badge">👤 ' + sanitize(an) + '</span>';
         });
       }
+      if (st.Contributors) {
+        st.Contributors.split(',').map(function(a) { return a.trim(); }).filter(Boolean).forEach(function(cn) {
+          html += '<span class="subtask-assignee-badge">🤝 ' + sanitize(cn) + '</span>';
+        });
+      }
       if (stDueDateStr) html += '<span class="subtask-due-badge' + stDueClass + '">📅 ' + stDueDateStr + '</span>';
       if (st.Estimated_Hours) html += '<span class="subtask-assignee-badge">⏱ ' + st.Estimated_Hours + 'h</span>';
       html += '</span>';
@@ -6730,6 +6742,18 @@ function openEditTaskModal(taskId, preserveAssignees) {
       html += '<div>';
       html += '<div class="st-pill-label">' + t('subtaskAssignee') + '</div>';
       html += assigneeListHtml;
+      html += '</div>';
+      // Contributeurs (sélection multiple)
+      var stContributors = (st.Contributors || '').split(',').map(function(a) { return a.trim(); }).filter(Boolean);
+      html += '<div>';
+      html += '<div class="st-pill-label">🤝 ' + t('subtaskContributors') + '</div>';
+      html += '<input type="text" class="st-multi-search" id="st-contrib-search-' + st.id + '" placeholder="' + (currentLang === 'fr' ? '🔍 Rechercher un membre...' : '🔍 Search a member...') + '" autocomplete="off" oninput="filterStMulti(' + st.id + ',\'contrib\',this.value)">';
+      html += '<div class="st-multi-list" id="st-contrib-list-' + st.id + '">';
+      for (var cui = 0; cui < users.length; cui++) {
+        var cuName = users[cui].Name;
+        html += '<label class="st-multi-item"><input type="checkbox" value="' + sanitize(cuName) + '"' + (stContributors.indexOf(cuName) !== -1 ? ' checked' : '') + '> ' + sanitize(cuName) + '</label>';
+      }
+      html += '</div>';
       html += '</div>';
       // Date + hours row
       html += '<div class="st-meta-row">';
@@ -7638,6 +7662,17 @@ function setStPill(field, subtaskId, value, btn) {
   btn.className = 'st-pill active-' + value;
 }
 
+// Filtre les cases d'une liste multi-sélection de sous-tâche (contributeurs) par nom
+function filterStMulti(subtaskId, kind, query) {
+  var list = document.getElementById('st-' + kind + '-list-' + subtaskId);
+  if (!list) return;
+  var q = (query || '').toLowerCase();
+  list.querySelectorAll('.st-multi-item').forEach(function(lbl) {
+    var txt = (lbl.textContent || '').toLowerCase();
+    lbl.style.display = (!q || txt.indexOf(q) !== -1) ? '' : 'none';
+  });
+}
+
 // Édition inline d'une sous-tâche
 function startEditSubtask(subtaskId) {
   var viewEl = document.getElementById('st-view-' + subtaskId);
@@ -7668,6 +7703,12 @@ function snapshotSubtaskForm(subtaskId) {
       snap[pfx] = el.value;
     }
   });
+  // Contributeurs : cases à cocher, l'instantané mémorise les valeurs cochées
+  var snapContribList = document.getElementById('st-contrib-list-' + subtaskId);
+  if (snapContribList) {
+    if (!snap) snap = {};
+    snap['st-contrib-list-'] = Array.prototype.map.call(snapContribList.querySelectorAll('input[type="checkbox"]:checked'), function(cb) { return cb.value; });
+  }
   return snap;
 }
 
@@ -7688,6 +7729,16 @@ function restoreSubtaskForm(subtaskId, snap) {
     var btn = grp ? grp.querySelector('[data-key="' + pair[1] + '"]') : null;
     if (btn) btn.click();
   });
+  // Contributeurs : recoche les cases correspondant à l'instantané
+  if (snap && snap['st-contrib-list-'] !== undefined) {
+    var rstContribList = document.getElementById('st-contrib-list-' + subtaskId);
+    if (rstContribList) {
+      var wantedContribs = snap['st-contrib-list-'];
+      rstContribList.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+        cb.checked = wantedContribs.indexOf(cb.value) !== -1;
+      });
+    }
+  }
   var dodInput = document.getElementById('st-dod-new-' + subtaskId);
   if (dodInput) dodInput.focus();
 }
@@ -7698,6 +7749,7 @@ async function saveEditSubtask(subtaskId, parentTaskId) {
   var tagSel       = document.getElementById('st-tag-'     + subtaskId);
   var prioritySel   = document.getElementById('st-priority-' + subtaskId);
   var assigneeSel   = document.getElementById('st-assignee-' + subtaskId);
+  var contribList   = document.getElementById('st-contrib-list-' + subtaskId);
   var startDateInput= document.getElementById('st-start-'    + subtaskId);
   var dueDateInput  = document.getElementById('st-due-'      + subtaskId);
   var hoursInput    = document.getElementById('st-hours-'    + subtaskId);
@@ -7705,6 +7757,10 @@ async function saveEditSubtask(subtaskId, parentTaskId) {
   var newTitle = titleInput.value.trim();
   if (!newTitle) return;
   var newAssignee = assigneeSel ? assigneeSel.value : '';
+  var newContributors = '';
+  if (contribList) {
+    newContributors = Array.prototype.map.call(contribList.querySelectorAll('input[type="checkbox"]:checked'), function(cb) { return cb.value; }).join(', ');
+  }
   var newStartDate = startDateInput && startDateInput.value ? Math.floor(new Date(startDateInput.value).getTime() / 1000) : null;
   var newDueDate = dueDateInput && dueDateInput.value ? Math.floor(new Date(dueDateInput.value).getTime() / 1000) : null;
   var typeEl = document.getElementById('st-type-' + subtaskId);
@@ -7726,6 +7782,7 @@ async function saveEditSubtask(subtaskId, parentTaskId) {
     Completed: newStatus === 'done',
     Priority: prioritySel ? prioritySel.value : 'medium',
     Assignee: newAssignee,
+    Contributors: newContributors,
     Tag: tagSel ? tagSel.value : '',
     Estimated_Hours: hoursInput && hoursInput.value ? parseFloat(hoursInput.value) : null,
     Type: typeEl ? typeEl.value : 'subtask'
@@ -7776,6 +7833,7 @@ async function generateSubtaskOccurrences(subtaskId, parentTaskId) {
       Status: 'todo',
       Priority: st.Priority || 'medium',
       Assignee: st.Assignee || '',
+      Contributors: st.Contributors || '',
       Due_Date: Math.floor(d.getTime() / 1000),
       Recurrence: st.Recurrence,
       Completed: false,
