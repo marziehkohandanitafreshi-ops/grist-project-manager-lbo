@@ -8128,7 +8128,7 @@ function getWorkloadHours(taskId, subtaskId, userIdent) {
 function formatWorkloadHours(h) {
   var rounded = Math.round(h * 10) / 10;
   var txt = currentLang === 'fr' ? String(rounded).replace('.', ',') : String(rounded);
-  return txt + ' h';
+  return txt + '&nbsp;h';
 }
 
 function workloadRowHtml(taskId, subtaskId, person) {
@@ -8166,7 +8166,7 @@ function renderWorkloadSection(taskId) {
   });
   grandTotal += taskTotal;
   html += '<div class="workload-group">';
-  html += '<div class="workload-group-label"><span>' + t('workloadTaskLevel') + '</span><span class="workload-group-total">' + formatWorkloadHours(taskTotal) + '</span></div>';
+  html += '<div class="workload-group-label"><span class="workload-group-title">' + t('workloadTaskLevel') + '</span><span class="workload-group-total">' + formatWorkloadHours(taskTotal) + '</span></div>';
   html += taskRows || '<div class="workload-empty">' + t('workloadNoPeople') + '</div>';
   html += '</div>';
 
@@ -8181,7 +8181,7 @@ function renderWorkloadSection(taskId) {
     });
     grandTotal += stTotal;
     html += '<div class="workload-group">';
-    html += '<div class="workload-group-label"><span>↳ ' + sanitize(st.Title) + '</span><span class="workload-group-total">' + formatWorkloadHours(stTotal) + '</span></div>';
+    html += '<div class="workload-group-label"><span class="workload-group-title">↳ ' + sanitize(st.Title) + '</span><span class="workload-group-total">' + formatWorkloadHours(stTotal) + '</span></div>';
     html += stRows || '<div class="workload-empty">' + t('workloadNoPeople') + '</div>';
     html += '</div>';
   });
