@@ -144,7 +144,6 @@ var i18n = {
     chartPriority: 'Répartition par priorité',
     chartAssignee: 'Tâches par assigné',
     chartWeek: 'Tâches cette semaine',
-    chartWorkload: 'Charge de travail (risque de surcharge)',
     completionRate: 'Taux de complétion',
     overdueLabel: 'En retard',
     avgTimePerTask: 'Temps moyen/tâche',
@@ -228,6 +227,7 @@ var i18n = {
     subtaskSaved: 'Sous-tâche modifiée',
     editSubtask: 'Modifier la sous-tâche',
     subtaskAssignee: 'Responsable',
+    subtaskContributors: 'Contributeurs',
     definitionOfDone: 'Definition of Done',
     addCriterion: 'Ajouter un critère',
     newCriterion: 'Nouveau critère',
@@ -257,17 +257,15 @@ var i18n = {
     hoursAgo: 'il y a {n}h',
     daysAgo: 'il y a {n}j',
     timeTracking: 'Suivi du temps',
-    startTimer: 'Démarrer',
-    stopTimer: 'Arrêter',
-    timerRunning: 'En cours...',
     totalTime: 'Temps total',
     estimatedTime: 'Temps estimé',
     timeEntries: 'Entrées de temps',
+    workloadPerPerson: 'Charge par personne',
+    workloadTaskLevel: 'Tâche',
+    workloadTotal: 'Total',
+    workloadNoPeople: 'Aucun responsable ni contributeur',
     noTimeEntries: 'Aucune entrée',
-    timeEntryAdded: 'Temps enregistré',
     timeEntryDeleted: 'Entrée supprimée',
-    hours: 'h',
-    minutes: 'min',
     recurrence: 'Récurrence',
     recurrenceNone: 'Aucune',
     recurrenceDaily: 'Quotidienne',
@@ -302,11 +300,14 @@ var i18n = {
     categoryCreated: 'Produit créé',
     categoryDeleted: 'Produit supprimé',
     noCategories: 'Aucun produit',
-    chartTimeline: 'Charge dans le temps par agent',
-    chartBurndown: 'Burndown / Burnup',
-    burnRemaining: 'Restantes',
-    burnCompleted: 'Terminées',
-    burnIdeal: 'Idéal',
+    chartTimeline: 'Charge planifiée par agent',
+    chartAvgDelay: 'Délai moyen',
+    avgDelayCaption: 'Moyenne de (échéance − début), en jours — tâches et sous-tâches',
+    avgDelayTasks: 'Tâches',
+    avgDelaySubtasks: 'Sous-tâches',
+    avgDelayUnit: 'j',
+    avgDelayNoData: 'Aucune donnée',
+    allProducts: 'Tous les produits',
     activityLog: 'Journal d\'activité',
     activityLogSubtitle: 'Historique des actions récentes',
     actTaskCreated: 'a créé la tâche',
@@ -329,8 +330,9 @@ var i18n = {
     calWeek: 'Semaine',
     calDay: 'Jour',
     manageRolesTitle: 'Gérer les rôles',
-    byWeek8: 'Par semaine (8 sem.)',
-    byMonth6: 'Par mois (6 mois)',
+    byMonth: 'Par mois',
+    byQuarter: 'Par trimestre',
+    byYear: 'Par année',
     allAgents: 'Tous les agents',
     advancedConfig: 'Configuration avancée',
     mappingSubtitle: 'Mappez vos propres tables et colonnes Grist',
@@ -489,7 +491,6 @@ var i18n = {
     chartPriority: 'Distribution by priority',
     chartAssignee: 'Tasks by assignee',
     chartWeek: 'Tasks this week',
-    chartWorkload: 'Workload (overload risk)',
     completionRate: 'Completion rate',
     overdueLabel: 'Overdue',
     avgTimePerTask: 'Avg time/task',
@@ -577,6 +578,7 @@ var i18n = {
     subtaskSaved: 'Subtask updated',
     editSubtask: 'Edit subtask',
     subtaskAssignee: 'Assignee',
+    subtaskContributors: 'Contributors',
     definitionOfDone: 'Definition of Done',
     addCriterion: 'Add criterion',
     newCriterion: 'New criterion',
@@ -606,17 +608,15 @@ var i18n = {
     hoursAgo: '{n}h ago',
     daysAgo: '{n}d ago',
     timeTracking: 'Time Tracking',
-    startTimer: 'Start',
-    stopTimer: 'Stop',
-    timerRunning: 'Running...',
     totalTime: 'Total time',
     estimatedTime: 'Estimated time',
     timeEntries: 'Time entries',
+    workloadPerPerson: 'Workload per person',
+    workloadTaskLevel: 'Task',
+    workloadTotal: 'Total',
+    workloadNoPeople: 'No assignee or contributor',
     noTimeEntries: 'No entries',
-    timeEntryAdded: 'Time recorded',
     timeEntryDeleted: 'Entry deleted',
-    hours: 'h',
-    minutes: 'min',
     recurrence: 'Recurrence',
     recurrenceNone: 'None',
     recurrenceDaily: 'Daily',
@@ -651,11 +651,14 @@ var i18n = {
     categoryCreated: 'Product created',
     categoryDeleted: 'Product deleted',
     noCategories: 'No products',
-    chartTimeline: 'Workload over time per assignee',
-    chartBurndown: 'Burndown / Burnup',
-    burnRemaining: 'Remaining',
-    burnCompleted: 'Completed',
-    burnIdeal: 'Ideal',
+    chartTimeline: 'Planned workload per agent',
+    chartAvgDelay: 'Average delay',
+    avgDelayCaption: 'Average of (due date − start date), in days — tasks and subtasks',
+    avgDelayTasks: 'Tasks',
+    avgDelaySubtasks: 'Subtasks',
+    avgDelayUnit: 'd',
+    avgDelayNoData: 'No data',
+    allProducts: 'All products',
     activityLog: 'Activity Log',
     activityLogSubtitle: 'Recent actions history',
     actTaskCreated: 'created task',
@@ -678,8 +681,9 @@ var i18n = {
     calWeek: 'Week',
     calDay: 'Day',
     manageRolesTitle: 'Manage roles',
-    byWeek8: 'By week (8 wks)',
-    byMonth6: 'By month (6 mos)',
+    byMonth: 'By month',
+    byQuarter: 'By quarter',
+    byYear: 'By year',
     allAgents: 'All agents',
     advancedConfig: 'Advanced configuration',
     mappingSubtitle: 'Map your own Grist tables and columns',
@@ -744,9 +748,11 @@ var users = [];
 var groups = [];
 var templates = [];
 var subtasks = [];
+var stContributorsState = {}; // sélections de contributeurs en cours d'édition, par sous-tâche
 var dependencies = [];
 var comments = [];
 var timeEntries = [];
+var workloadEntries = [];
 var customFields = [];
 var customFieldValues = [];
 var categories = [];
@@ -758,7 +764,6 @@ var currentFilterAssignee = null; // user Name
 var currentFilterCategory = null;
 var currentFilterTag = null;
 var mineOnly = false; // "Mes projets" : projets créés par moi OU où je suis assigné
-var activeTimers = {}; // taskId -> startTime (for running timers)
 var kanbanGroupBy = 'status'; // 'status' | 'priority' | 'project'
 var kanbanSort = 'manual'; // 'manual' | 'alpha' | 'alpha-desc' | 'due'
 var expandedKanbanCards = {}; // taskId -> true quand la tuile est dépliée (A2)
@@ -889,6 +894,7 @@ var SUBTASKS_TABLE = 'PM_Subtasks';
 var DEPENDENCIES_TABLE = 'PM_Dependencies';
 var COMMENTS_TABLE = 'PM_Comments';
 var TIME_ENTRIES_TABLE = 'PM_TimeEntries';
+var WORKLOAD_TABLE = 'PM_Workload';
 var CUSTOM_FIELDS_TABLE = 'PM_CustomFields';
 var CUSTOM_FIELD_VALUES_TABLE = 'PM_CustomFieldValues';
 var CATEGORIES_TABLE = 'PM_Categories';
@@ -1690,21 +1696,7 @@ function getTaskTotalTime(taskId) {
   for (var i = 0; i < entries.length; i++) {
     total += entries[i].Duration || 0;
   }
-  // Add running timer if active
-  if (activeTimers[taskId]) {
-    total += Math.floor(Date.now() / 1000) - activeTimers[taskId];
-  }
   return total;
-}
-
-function formatDuration(seconds) {
-  if (!seconds || seconds < 0) return '0' + t('minutes');
-  var hours = Math.floor(seconds / 3600);
-  var mins = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) {
-    return hours + t('hours') + ' ' + mins + t('minutes');
-  }
-  return mins + t('minutes');
 }
 
 function formatDurationShort(seconds) {
@@ -1936,6 +1928,7 @@ async function ensureTables() {
           { id: 'Status', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['todo', 'progress', 'done', 'archived'] }) },
           { id: 'Priority', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['high', 'medium', 'low'] }) },
           { id: 'Assignee', type: 'Text' },
+          { id: 'Contributors', type: 'Text' },
           { id: 'Tag', type: 'Text' },
           { id: 'Due_Date', type: 'Date' },
           { id: 'Estimated_Hours', type: 'Numeric' },
@@ -1976,6 +1969,17 @@ async function ensureTables() {
           { id: 'End_Time', type: 'Date' },
           { id: 'Duration', type: 'Int' },
           { id: 'Description', type: 'Text' }
+        ]]
+      ]);
+    }
+
+    if (existingTables.indexOf(WORKLOAD_TABLE) === -1) {
+      await grist.docApi.applyUserActions([
+        ['AddTable', WORKLOAD_TABLE, [
+          { id: 'Task_Id', type: 'Int' },
+          { id: 'Subtask_Id', type: 'Int' },
+          { id: 'User', type: 'Text' },
+          { id: 'Planned_Hours', type: 'Numeric' }
         ]]
       ]);
     }
@@ -2260,6 +2264,9 @@ async function ensureTables() {
         if (stCols.indexOf('Assignee') === -1) {
           stActions.push(['AddColumn', SUBTASKS_TABLE, 'Assignee', { type: 'Text' }]);
         }
+        if (stCols.indexOf('Contributors') === -1) {
+          stActions.push(['AddColumn', SUBTASKS_TABLE, 'Contributors', { type: 'Text' }]);
+        }
         if (stCols.indexOf('Tag') === -1) {
           stActions.push(['AddColumn', SUBTASKS_TABLE, 'Tag', { type: 'Text' }]);
         }
@@ -2478,6 +2485,7 @@ async function loadAllData() {
           Order: subtaskData.Order ? subtaskData.Order[i] : 0,
           Blocked_By_Subtask_Id: subtaskData.Blocked_By_Subtask_Id ? subtaskData.Blocked_By_Subtask_Id[i] : null,
           Assignee: subtaskData.Assignee ? subtaskData.Assignee[i] : '',
+          Contributors: subtaskData.Contributors ? subtaskData.Contributors[i] : '',
           Tag: subtaskData.Tag ? subtaskData.Tag[i] : '',
           Due_Date: subtaskData.Due_Date ? subtaskData.Due_Date[i] : null,
           Start_Date: subtaskData.Start_Date ? subtaskData.Start_Date[i] : null,
@@ -2568,6 +2576,8 @@ async function loadAllData() {
   } catch (e) {
     timeEntries = [];
   }
+
+  await loadWorkloadEntries();
 
   try {
     var cfData = await grist.docApi.fetchTable(CUSTOM_FIELDS_TABLE);
@@ -4121,9 +4131,8 @@ function renderTaskCard(task) {
     html += '<span class="task-card-comments">💬 ' + taskComments.length + '</span>';
   }
   var totalTime = getTaskTotalTime(task.id);
-  var isTimerRunning = !!activeTimers[task.id];
-  if (cd.time && (totalTime > 0 || isTimerRunning)) {
-    html += '<span class="task-card-time' + (isTimerRunning ? ' timer-running' : '') + '">⏱️ ' + formatDurationShort(totalTime) + (isTimerRunning ? ' ●' : '') + '</span>';
+  if (cd.time && totalTime > 0) {
+    html += '<span class="task-card-time">⏱️ ' + formatDurationShort(totalTime) + '</span>';
   }
   if (task.Recurrence && task.Recurrence !== 'none') {
     var recLabel = recurrenceSymbol(task.Recurrence);
@@ -6658,6 +6667,11 @@ function openEditTaskModal(taskId, preserveAssignees) {
           html += '<span class="subtask-assignee-badge">👤 ' + sanitize(an) + '</span>';
         });
       }
+      if (st.Contributors) {
+        st.Contributors.split(',').map(function(a) { return a.trim(); }).filter(Boolean).forEach(function(cn) {
+          html += '<span class="subtask-assignee-badge">🤝 ' + sanitize(cn) + '</span>';
+        });
+      }
       if (stDueDateStr) html += '<span class="subtask-due-badge' + stDueClass + '">📅 ' + stDueDateStr + '</span>';
       if (st.Estimated_Hours) html += '<span class="subtask-assignee-badge">⏱ ' + st.Estimated_Hours + 'h</span>';
       html += '</span>';
@@ -6730,6 +6744,12 @@ function openEditTaskModal(taskId, preserveAssignees) {
       html += '<div>';
       html += '<div class="st-pill-label">' + t('subtaskAssignee') + '</div>';
       html += assigneeListHtml;
+      html += '</div>';
+      // Contributeurs (sélection multiple, liste déroulante à cases à cocher)
+      stContributorsState[st.id] = (st.Contributors || '').split(',').map(function(a) { return a.trim(); }).filter(Boolean);
+      html += '<div class="st-span2">';
+      html += '<div class="st-pill-label">🤝 ' + t('subtaskContributors') + '</div>';
+      html += '<div class="filter-combo st-contrib-combo" id="st-contrib-combo-' + st.id + '"></div>';
       html += '</div>';
       // Date + hours row
       html += '<div class="st-meta-row">';
@@ -6843,31 +6863,12 @@ function openEditTaskModal(taskId, preserveAssignees) {
 
   // Time Tracking card
   var totalTime = getTaskTotalTime(task.id);
-  var isTimerRunning = !!activeTimers[task.id];
   var taskTimeEntries = getTaskTimeEntries(task.id);
   html += '<div class="detail-card time-card">';
   html += '<h4>⏱️ ' + t('timeTracking') + '</h4>';
-  
-  // Timer button
-  html += '<div class="timer-control">';
-  if (isTimerRunning) {
-    html += '<button class="timer-btn timer-stop" onclick="stopTimer(' + task.id + ')">⏹️ ' + t('stopTimer') + '</button>';
-    html += '<span class="timer-status running">● ' + t('timerRunning') + '</span>';
-  } else {
-    html += '<button class="timer-btn timer-start" onclick="startTimer(' + task.id + ')">▶️ ' + t('startTimer') + '</button>';
-  }
-  html += '</div>';
-  
-  // Manual time entry
-  html += '<div class="manual-time-entry" style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap;">';
-  html += '<input type="number" id="manual-hours" min="0" max="99" placeholder="0" style="width:52px;" class="form-input" title="' + (currentLang === 'fr' ? 'Heures' : 'Hours') + '"> h';
-  html += '<input type="number" id="manual-minutes" min="0" max="59" placeholder="0" style="width:52px;" class="form-input" title="' + (currentLang === 'fr' ? 'Minutes' : 'Minutes') + '"> min';
-  html += '<button class="btn btn-secondary btn-sm" onclick="addManualTimeEntry(' + task.id + ')">+ ' + (currentLang === 'fr' ? 'Ajouter' : 'Add') + '</button>';
-  html += '</div>';
 
   // Time summary
   html += '<div class="time-summary">';
-  html += '<div class="detail-info-row"><span class="info-label">' + t('totalTime') + ' :</span><span class="info-value time-value">' + formatDuration(totalTime) + '</span></div>';
   if (task.Estimated_Hours) {
     var estimatedSec = task.Estimated_Hours * 3600;
     var pctUsed = Math.round((totalTime / estimatedSec) * 100);
@@ -6875,6 +6876,9 @@ function openEditTaskModal(taskId, preserveAssignees) {
   }
   html += '</div>';
   
+  // Charge par personne (rendu après injection de la modale)
+  html += '<div id="workload-section-' + task.id + '"></div>';
+
   // Recent time entries (newest first)
   if (taskTimeEntries.length > 0) {
     html += '<div class="time-entries">';
@@ -7081,6 +7085,10 @@ function openEditTaskModal(taskId, preserveAssignees) {
   // D2 : remplir la liste des pièces jointes (token asynchrone à part)
   renderAttachmentsSection(task.id);
   taskSubtasks.forEach(function(st) { renderSubtaskAttachmentsSection(st.id); });
+  // Listes déroulantes à cases à cocher des contributeurs de chaque sous-tâche
+  taskSubtasks.forEach(function(st) { renderStContribCombo(st.id); });
+  // Charge par personne (bloc suivi du temps)
+  renderWorkloadSection(task.id);
 }
 
 // Suffixe de conteneur DOM pour un rôle RACI. editAssignees -> 'assignee' (et non
@@ -7638,6 +7646,105 @@ function setStPill(field, subtaskId, value, btn) {
   btn.className = 'st-pill active-' + value;
 }
 
+// --- Contributeurs d'une sous-tâche : liste déroulante à cases à cocher ---
+
+// Sélection en cours d'édition (sinon on retombe sur la valeur enregistrée)
+function getStContributors(subtaskId) {
+  if (stContributorsState[subtaskId]) return stContributorsState[subtaskId];
+  var st = subtasks.find(function(s) { return s.id === subtaskId; });
+  return (st && st.Contributors ? st.Contributors : '').split(',').map(function(a) { return a.trim(); }).filter(Boolean);
+}
+
+// Reconstruit le combo (bouton + dropdown à cases) ; l'état ouvert est préservé
+function renderStContribCombo(subtaskId) {
+  var box = document.getElementById('st-contrib-combo-' + subtaskId);
+  if (!box) return;
+  var selected = getStContributors(subtaskId);
+  var prevDd = document.getElementById('st-contrib-dd-' + subtaskId);
+  var wasOpen = prevDd && prevDd.classList.contains('show');
+  var placeholder = currentLang === 'fr' ? 'Sélectionner...' : 'Select...';
+  var labelText = selected.length === 0 ? placeholder : selected.join(', ');
+  var h = '<button type="button" class="filter-combo-btn st-contrib-btn' + (selected.length ? ' active' : '') + '" id="st-contrib-btn-' + subtaskId + '" onclick="toggleStContribCombo(' + subtaskId + ')">';
+  h += '<span class="filter-combo-label">' + sanitize(labelText) + '</span><span class="filter-combo-chevron">▾</span></button>';
+  h += '<div class="filter-combo-dd" id="st-contrib-dd-' + subtaskId + '">';
+  h += '<div class="filter-combo-search"><input type="text" id="st-contrib-search-' + subtaskId + '" placeholder="' + (currentLang === 'fr' ? 'Rechercher...' : 'Search...') + '" oninput="filterStContribCombo(' + subtaskId + ', this.value)" autocomplete="off"></div>';
+  h += '<div class="filter-combo-list" id="st-contrib-list-' + subtaskId + '">';
+  if (selected.length > 0) {
+    h += '<div class="filter-combo-opt" data-value="" data-label="' + (currentLang === 'fr' ? 'effacer' : 'clear') + '" style="color:#ef4444;font-weight:600;">✕ ' + (currentLang === 'fr' ? 'Effacer' : 'Clear') + '</div>';
+  }
+  users.forEach(function(u) {
+    var on = selected.indexOf(u.Name) !== -1;
+    h += '<div class="filter-combo-opt' + (on ? ' selected' : '') + '" data-value="' + sanitize(u.Name) + '" data-label="' + sanitize(u.Name) + '">';
+    h += '<span style="display:inline-block;width:16px;">' + (on ? '✓' : '') + '</span>' + sanitize(u.Name) + '</div>';
+  });
+  h += '</div></div>';
+  h += '<input type="hidden" id="st-contributors-' + subtaskId + '" value="' + sanitize(selected.join(', ')) + '">';
+  box.innerHTML = h;
+  // Clic sur une option : délégation, la valeur est lue via getAttribute (dé-échappée
+  // par le navigateur) — aucun échappement inline à gérer pour les noms avec apostrophe
+  var list = document.getElementById('st-contrib-list-' + subtaskId);
+  if (list) {
+    list.querySelectorAll('.filter-combo-opt').forEach(function(opt) {
+      opt.addEventListener('click', function() {
+        var v = opt.getAttribute('data-value') || '';
+        if (v === '') {
+          stContributorsState[subtaskId] = [];
+        } else {
+          var arr = getStContributors(subtaskId).slice();
+          var i = arr.indexOf(v);
+          if (i === -1) arr.push(v); else arr.splice(i, 1);
+          stContributorsState[subtaskId] = arr;
+        }
+        renderStContribCombo(subtaskId);
+      });
+    });
+  }
+  if (wasOpen) {
+    var dd = document.getElementById('st-contrib-dd-' + subtaskId);
+    var btn = document.getElementById('st-contrib-btn-' + subtaskId);
+    if (dd) dd.classList.add('show');
+    if (btn) btn.classList.add('open');
+  }
+}
+
+function toggleStContribCombo(subtaskId) {
+  var dd = document.getElementById('st-contrib-dd-' + subtaskId);
+  var btn = document.getElementById('st-contrib-btn-' + subtaskId);
+  if (!dd) return;
+  var isOpen = dd.classList.contains('show');
+  document.querySelectorAll('.filter-combo-dd.show').forEach(function(d) { d.classList.remove('show'); });
+  document.querySelectorAll('.filter-combo-btn.open').forEach(function(b) { b.classList.remove('open'); });
+  if (!isOpen) {
+    dd.classList.add('show');
+    if (btn) btn.classList.add('open');
+    var inp = document.getElementById('st-contrib-search-' + subtaskId);
+    if (inp) { inp.value = ''; inp.focus(); filterStContribCombo(subtaskId, ''); }
+    setTimeout(function() {
+      document.addEventListener('mousedown', function hideSC(e) {
+        var box = document.getElementById('st-contrib-combo-' + subtaskId);
+        if (box && !box.contains(e.target)) {
+          var dd2 = document.getElementById('st-contrib-dd-' + subtaskId);
+          var btn2 = document.getElementById('st-contrib-btn-' + subtaskId);
+          if (dd2) dd2.classList.remove('show');
+          if (btn2) btn2.classList.remove('open');
+          document.removeEventListener('mousedown', hideSC);
+        }
+      });
+    }, 0);
+  }
+}
+
+// Filtre les options du dropdown contributeurs par nom
+function filterStContribCombo(subtaskId, query) {
+  var list = document.getElementById('st-contrib-list-' + subtaskId);
+  if (!list) return;
+  var q = (query || '').trim().toLowerCase();
+  list.querySelectorAll('.filter-combo-opt').forEach(function(opt) {
+    var label = (opt.getAttribute('data-label') || '').toLowerCase();
+    opt.style.display = (!q || label.indexOf(q) !== -1) ? '' : 'none';
+  });
+}
+
 // Édition inline d'une sous-tâche
 function startEditSubtask(subtaskId) {
   var viewEl = document.getElementById('st-view-' + subtaskId);
@@ -7668,6 +7775,12 @@ function snapshotSubtaskForm(subtaskId) {
       snap[pfx] = el.value;
     }
   });
+  // Contributeurs : l'instantané mémorise la sélection en cours (liste déroulante)
+  var snapContribHidden = document.getElementById('st-contributors-' + subtaskId);
+  if (snapContribHidden) {
+    if (!snap) snap = {};
+    snap['st-contributors-'] = snapContribHidden.value;
+  }
   return snap;
 }
 
@@ -7688,6 +7801,11 @@ function restoreSubtaskForm(subtaskId, snap) {
     var btn = grp ? grp.querySelector('[data-key="' + pair[1] + '"]') : null;
     if (btn) btn.click();
   });
+  // Contributeurs : réapplique la sélection de l'instantané dans la liste déroulante
+  if (snap && snap['st-contributors-'] !== undefined) {
+    stContributorsState[subtaskId] = (snap['st-contributors-'] || '').split(',').map(function(a) { return a.trim(); }).filter(Boolean);
+    renderStContribCombo(subtaskId);
+  }
   var dodInput = document.getElementById('st-dod-new-' + subtaskId);
   if (dodInput) dodInput.focus();
 }
@@ -7698,6 +7816,7 @@ async function saveEditSubtask(subtaskId, parentTaskId) {
   var tagSel       = document.getElementById('st-tag-'     + subtaskId);
   var prioritySel   = document.getElementById('st-priority-' + subtaskId);
   var assigneeSel   = document.getElementById('st-assignee-' + subtaskId);
+  var contribHidden = document.getElementById('st-contributors-' + subtaskId);
   var startDateInput= document.getElementById('st-start-'    + subtaskId);
   var dueDateInput  = document.getElementById('st-due-'      + subtaskId);
   var hoursInput    = document.getElementById('st-hours-'    + subtaskId);
@@ -7705,6 +7824,7 @@ async function saveEditSubtask(subtaskId, parentTaskId) {
   var newTitle = titleInput.value.trim();
   if (!newTitle) return;
   var newAssignee = assigneeSel ? assigneeSel.value : '';
+  var newContributors = contribHidden ? contribHidden.value : '';
   var newStartDate = startDateInput && startDateInput.value ? Math.floor(new Date(startDateInput.value).getTime() / 1000) : null;
   var newDueDate = dueDateInput && dueDateInput.value ? Math.floor(new Date(dueDateInput.value).getTime() / 1000) : null;
   var typeEl = document.getElementById('st-type-' + subtaskId);
@@ -7726,6 +7846,7 @@ async function saveEditSubtask(subtaskId, parentTaskId) {
     Completed: newStatus === 'done',
     Priority: prioritySel ? prioritySel.value : 'medium',
     Assignee: newAssignee,
+    Contributors: newContributors,
     Tag: tagSel ? tagSel.value : '',
     Estimated_Hours: hoursInput && hoursInput.value ? parseFloat(hoursInput.value) : null,
     Type: typeEl ? typeEl.value : 'subtask'
@@ -7776,6 +7897,7 @@ async function generateSubtaskOccurrences(subtaskId, parentTaskId) {
       Status: 'todo',
       Priority: st.Priority || 'medium',
       Assignee: st.Assignee || '',
+      Contributors: st.Contributors || '',
       Due_Date: Math.floor(d.getTime() / 1000),
       Recurrence: st.Recurrence,
       Completed: false,
@@ -7934,77 +8056,162 @@ async function deleteComment(commentId, taskId) {
 }
 
 // =============================================================================
-// TIME TRACKING
+// CHARGE PAR PERSONNE (bloc suivi du temps)
 // =============================================================================
 
-async function startTimer(taskId) {
-  var scrollPos = getModalScrollTop();
-  await persistTaskFormFields(taskId);   // A1 : ne pas perdre la saisie en cours
-  activeTimers[taskId] = Math.floor(Date.now() / 1000);
-  await loadAllData();
-  openEditTaskModal(taskId, true);
-  restoreModalScrollTop(scrollPos);      // A3
-}
-
-async function stopTimer(taskId) {
-  if (!activeTimers[taskId]) return;
-  
-  var startTime = activeTimers[taskId];
-  var endTime = Math.floor(Date.now() / 1000);
-  var duration = endTime - startTime;
-  var scrollPos = getModalScrollTop();
-  await persistTaskFormFields(taskId);   // A1
-
+async function loadWorkloadEntries() {
   try {
-    await grist.docApi.applyUserActions([
-      ['AddRecord', TIME_ENTRIES_TABLE, null, {
-        Task_Id: taskId,
-        User: currentUserEmail || 'Utilisateur',
-        Start_Time: startTime,
-        End_Time: endTime,
-        Duration: duration,
-        Description: ''
-      }]
-    ]);
-    delete activeTimers[taskId];
-    showToast(t('timeEntryAdded'), 'success');
-    await loadAllData();
-    openEditTaskModal(taskId, true);
-    restoreModalScrollTop(scrollPos);    // A3
+    var data = await grist.docApi.fetchTable(WORKLOAD_TABLE);
+    workloadEntries = [];
+    if (data && data.id) {
+      for (var i = 0; i < data.id.length; i++) {
+        workloadEntries.push({
+          id: data.id[i],
+          Task_Id: data.Task_Id ? data.Task_Id[i] : null,
+          Subtask_Id: data.Subtask_Id ? data.Subtask_Id[i] : null,
+          User: data.User ? data.User[i] : '',
+          Planned_Hours: data.Planned_Hours ? data.Planned_Hours[i] : 0
+        });
+      }
+    }
   } catch (e) {
-    console.error('Error stopping timer:', e);
-    showToast('Error: ' + e.message, 'error');
+    workloadEntries = [];
   }
 }
 
-async function addManualTimeEntry(taskId) {
-  var hours = parseInt(document.getElementById('manual-hours').value) || 0;
-  var minutes = parseInt(document.getElementById('manual-minutes').value) || 0;
-  var duration = hours * 3600 + minutes * 60;
-  if (duration <= 0) {
-    showToast(currentLang === 'fr' ? 'Entrez une durée valide' : 'Enter a valid duration', 'error');
-    return;
-  }
-  var now = Math.floor(Date.now() / 1000);
-  var scrollPos = getModalScrollTop();
-  await persistTaskFormFields(taskId);   // A1
+// Liste dédupliquée des personnes d'un champ multi (séparé par des virgules)
+function parsePeopleList(str) {
+  var seen = {};
+  var out = [];
+  (str || '').split(',').forEach(function(s) {
+    var p = s.trim();
+    if (!p) return;
+    var k = p.toLowerCase();
+    if (!seen[k]) { seen[k] = 1; out.push(p); }
+  });
+  return out;
+}
+
+// Personnes concernées par la charge : responsables + contributeurs.
+// Tâche : R (Responsable) + C (Consulté, contributeur) — A et I exclus (non exécutants).
+// Sous-tâche : Responsable (Assignee) + Contributeurs.
+function getWorkloadPeople(responsablesStr, contributeursStr) {
+  var people = [];
+  parsePeopleList(responsablesStr).forEach(function(p) { people.push({ ident: p, role: 'resp' }); });
+  parsePeopleList(contributeursStr).forEach(function(p) { people.push({ ident: p, role: 'contrib' }); });
+  return people;
+}
+
+function getWorkloadHours(taskId, subtaskId, userIdent) {
+  var stId = subtaskId || 0;
+  var entry = workloadEntries.find(function(w) {
+    return w.Task_Id === taskId && (w.Subtask_Id || 0) === stId && w.User === userIdent;
+  });
+  return entry ? (entry.Planned_Hours || 0) : 0;
+}
+
+function formatWorkloadHours(h) {
+  var rounded = Math.round(h * 10) / 10;
+  var txt = currentLang === 'fr' ? String(rounded).replace('.', ',') : String(rounded);
+  return txt + '&nbsp;h';
+}
+
+function workloadRowHtml(taskId, subtaskId, person) {
+  var h = getWorkloadHours(taskId, subtaskId, person.ident);
+  var roleLabel = person.role === 'resp' ? t('subtaskAssignee') : t('subtaskContributors');
+  var icon = person.role === 'resp' ? '👤' : '🤝';
+  return '<div class="workload-row">' +
+    '<span class="workload-person" title="' + sanitize(roleLabel) + '">' + icon + ' ' + sanitize(getUserDisplayName(person.ident)) + '</span>' +
+    '<input type="number" class="workload-input" min="0" step="0.5" value="' + (h || '') + '" data-wl-task="' + taskId + '" data-wl-st="' + (subtaskId || 0) + '" data-wl-user="' + sanitize(person.ident) + '">' +
+    '<span class="workload-unit">h</span>' +
+    '</div>';
+}
+
+// Rend la section « charge par personne » de la carte suivi du temps :
+// un groupe pour la tâche (R + C), un groupe par sous-tâche (responsable + contributeurs),
+// et le total global.
+function renderWorkloadSection(taskId) {
+  var container = document.getElementById('workload-section-' + taskId);
+  if (!container) return;
+  var task = tasks.find(function(t) { return t.id === taskId; });
+  if (!task) return;
+
+  var html = '<div class="workload-block">';
+  html += '<div class="workload-title">👥 ' + t('workloadPerPerson') + '</div>';
+
+  var grandTotal = 0;
+
+  // Niveau tâche : Responsable (R) + Consulté (C, contributeur)
+  var taskPeople = getWorkloadPeople(task.Assignee, task.Consulted);
+  var taskTotal = 0;
+  var taskRows = '';
+  taskPeople.forEach(function(p) {
+    taskTotal += getWorkloadHours(taskId, 0, p.ident);
+    taskRows += workloadRowHtml(taskId, 0, p);
+  });
+  grandTotal += taskTotal;
+  html += '<div class="workload-group">';
+  html += '<div class="workload-group-label"><span class="workload-group-title">' + t('workloadTaskLevel') + '</span><span class="workload-group-total">' + formatWorkloadHours(taskTotal) + '</span></div>';
+  html += taskRows || '<div class="workload-empty">' + t('workloadNoPeople') + '</div>';
+  html += '</div>';
+
+  // Niveau sous-tâche : Responsable + Contributeurs
+  getTaskSubtasks(taskId).forEach(function(st) {
+    var stPeople = getWorkloadPeople(st.Assignee, st.Contributors);
+    var stTotal = 0;
+    var stRows = '';
+    stPeople.forEach(function(p) {
+      stTotal += getWorkloadHours(taskId, st.id, p.ident);
+      stRows += workloadRowHtml(taskId, st.id, p);
+    });
+    grandTotal += stTotal;
+    html += '<div class="workload-group">';
+    html += '<div class="workload-group-label"><span class="workload-group-title">↳ ' + sanitize(st.Title) + '</span><span class="workload-group-total">' + formatWorkloadHours(stTotal) + '</span></div>';
+    html += stRows || '<div class="workload-empty">' + t('workloadNoPeople') + '</div>';
+    html += '</div>';
+  });
+
+  html += '<div class="workload-grand-total">' + t('workloadTotal') + ' : <strong>' + formatWorkloadHours(grandTotal) + '</strong></div>';
+  html += '</div>';
+  container.innerHTML = html;
+
+  // Délégation des changements : l'identifiant est passé en data-* (lu via
+  // getAttribute, dé-échappé par le navigateur) — aucun échappement inline à gérer
+  // pour les noms avec apostrophe.
+  container.querySelectorAll('.workload-input').forEach(function(inp) {
+    inp.addEventListener('change', function() {
+      saveWorkload(parseInt(inp.getAttribute('data-wl-task')), parseInt(inp.getAttribute('data-wl-st')) || 0, inp.getAttribute('data-wl-user'), inp.value);
+    });
+  });
+}
+
+// Enregistre la charge d'une personne (0 ou vide = suppression de la ligne)
+async function saveWorkload(taskId, subtaskId, userIdent, hoursStr) {
+  var hours = parseFloat(hoursStr);
+  if (isNaN(hours) || hours < 0) hours = 0;
+  var stId = subtaskId || 0;
+  var existing = workloadEntries.find(function(w) {
+    return w.Task_Id === taskId && (w.Subtask_Id || 0) === stId && w.User === userIdent;
+  });
   try {
-    await grist.docApi.applyUserActions([
-      ['AddRecord', TIME_ENTRIES_TABLE, null, {
+    if (hours <= 0) {
+      if (existing) {
+        await grist.docApi.applyUserActions([['RemoveRecord', WORKLOAD_TABLE, existing.id]]);
+      }
+    } else if (existing) {
+      await grist.docApi.applyUserActions([['UpdateRecord', WORKLOAD_TABLE, existing.id, { Planned_Hours: hours }]]);
+    } else {
+      await grist.docApi.applyUserActions([['AddRecord', WORKLOAD_TABLE, null, {
         Task_Id: taskId,
-        User: currentUserEmail || 'Utilisateur',
-        Start_Time: now - duration,
-        End_Time: now,
-        Duration: duration,
-        Description: currentLang === 'fr' ? 'Saisie manuelle' : 'Manual entry'
-      }]
-    ]);
-    showToast(t('timeEntryAdded'), 'success');
-    await loadAllData();
-    openEditTaskModal(taskId, true);
-    restoreModalScrollTop(scrollPos);    // A3
+        Subtask_Id: stId || null,
+        User: userIdent,
+        Planned_Hours: hours
+      }]]);
+    }
+    await loadWorkloadEntries();
+    renderWorkloadSection(taskId);
   } catch (e) {
-    console.error('Error adding manual time entry:', e);
+    console.error('Error saving workload:', e);
     showToast('Error: ' + e.message, 'error');
   }
 }
@@ -8869,107 +9076,10 @@ function renderStatsView() {
   var avgMinutes = filteredTasks.length > 0 ? Math.round(totalMinutes / filteredTasks.length) : 0;
   var avgHours = Math.round(avgMinutes / 60 * 10) / 10;
   document.getElementById('stats-avg-time').textContent = avgHours + 'h';
-
-  // Workload chart - Risk of overload per user
-  renderWorkloadChart();
-  renderBurndownChart();
-  renderActivityLog();
-}
-
-function renderWorkloadChart() {
-  var workloadData = {};
-  var now = Math.floor(Date.now() / 1000);
-  var filteredTasks = getFilteredTasks();
-  
-  // Calculate workload for each assignee
-  filteredTasks.forEach(function(task) {
-    if (task.Assignee && task.Status !== 'done') {
-      task.Assignee.split(',').forEach(function(a) {
-        var email = a.trim();
-        var name = getUserDisplayName(email);
-        if (!workloadData[name]) {
-          workloadData[name] = {
-            total: 0,
-            overdue: 0,
-            highPriority: 0,
-            estimatedHours: 0
-          };
-        }
-        workloadData[name].total++;
-        if (task.Due_Date && task.Due_Date < now) {
-          workloadData[name].overdue++;
-        }
-        if (task.Priority === 'high') {
-          workloadData[name].highPriority++;
-        }
-        if (task.Estimated_Hours) {
-          workloadData[name].estimatedHours += task.Estimated_Hours;
-        }
-      });
-    }
-  });
-
-  // Calculate risk score for each user
-  // Score = (tasks * 10) + (overdue * 30) + (highPriority * 15)
-  // Risk levels: 0-50 = low, 51-100 = medium, >100 = high
-  var workloadEntries = Object.entries(workloadData).map(function(entry) {
-    var name = entry[0];
-    var data = entry[1];
-    var score = (data.total * 10) + (data.overdue * 30) + (data.highPriority * 15);
-    var level = score <= 50 ? 'low' : (score <= 100 ? 'medium' : 'high');
-    var levelLabel = currentLang === 'fr' 
-      ? (level === 'low' ? 'OK' : (level === 'medium' ? 'Attention' : 'Surcharge'))
-      : (level === 'low' ? 'OK' : (level === 'medium' ? 'Warning' : 'Overload'));
-    return {
-      name: name,
-      total: data.total,
-      overdue: data.overdue,
-      highPriority: data.highPriority,
-      score: score,
-      level: level,
-      levelLabel: levelLabel
-    };
-  }).sort(function(a, b) { return b.score - a.score; });
-
-  var maxScore = workloadEntries.length > 0 ? Math.max(workloadEntries[0].score, 100) : 100;
-
-  var html = '';
-  if (workloadEntries.length === 0) {
-    html = '<div style="text-align:center;color:#94a3b8;padding:20px;">' + (currentLang === 'fr' ? 'Aucune tâche assignée' : 'No assigned tasks') + '</div>';
-  } else {
-    workloadEntries.forEach(function(entry) {
-      var barWidth = Math.min((entry.score / maxScore) * 100, 100);
-      html += '<div class="workload-row">';
-      html += '<div class="workload-name" title="' + entry.name + '">' + entry.name + '</div>';
-      html += '<div class="workload-bar-bg">';
-      html += '<div class="workload-bar-fill ' + entry.level + '" style="width:' + barWidth + '%"></div>';
-      html += '</div>';
-      html += '<div class="workload-stats">';
-      html += '<span class="workload-badge ' + entry.level + '">' + entry.levelLabel + '</span>';
-      html += '<span class="workload-detail">' + entry.total + ' ' + (currentLang === 'fr' ? 'tâches' : 'tasks');
-      if (entry.overdue > 0) {
-        html += ' • <span style="color:#ef4444;">' + entry.overdue + ' ' + (currentLang === 'fr' ? 'en retard' : 'overdue') + '</span>';
-      }
-      html += '</span>';
-      html += '</div>';
-      html += '</div>';
-    });
-  }
-
-  document.getElementById('chart-workload').innerHTML = html;
-
-  // Populate agent filter and render timeline
-  var agentSelect = document.getElementById('timeline-agent');
-  if (agentSelect) {
-    var agentNames = Object.keys(workloadData).sort();
-    var currentAgentVal = agentSelect.value;
-    agentSelect.innerHTML = '<option value="">' + (currentLang === 'fr' ? 'Tous les agents' : 'All agents') + '</option>';
-    agentNames.forEach(function(name) {
-      var sel = name === currentAgentVal ? ' selected' : '';
-      agentSelect.innerHTML += '<option value="' + sanitize(name) + '"' + sel + '>' + sanitize(name) + '</option>';
-    });
-  }
+  // Charge planifiée par agent (suivi du temps)
   renderTimelineChart();
+  renderAvgDelayStats();
+  renderActivityLog();
 }
 
 function renderTimelineChart() {
@@ -8978,7 +9088,7 @@ function renderTimelineChart() {
 
   var periodSel = document.getElementById('timeline-period');
   var agentSel = document.getElementById('timeline-agent');
-  var period = periodSel ? periodSel.value : 'weeks';
+  var period = periodSel ? periodSel.value : 'months';
   var agentFilter = agentSel ? agentSel.value : '';
 
   var now = new Date(); now.setHours(0, 0, 0, 0);
@@ -8986,80 +9096,174 @@ function renderTimelineChart() {
   var tlMn = currentLang === 'fr'
     ? ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
     : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  if (period === 'weeks') {
-    // Show 4 past weeks + current + 3 future = 8 weeks
-    var dayOfW = now.getDay();
-    var offToMon = dayOfW === 0 ? -6 : 1 - dayOfW;
-    var thisMon = new Date(now); thisMon.setDate(thisMon.getDate() + offToMon);
-    for (var w = -4; w < 4; w++) {
-      var wStart = new Date(thisMon); wStart.setDate(thisMon.getDate() + w * 7);
-      var wEnd = new Date(wStart); wEnd.setDate(wStart.getDate() + 6); wEnd.setHours(23, 59, 59, 999);
-      var isCurrentW = w === 0;
-      slots.push({ label: wStart.getDate() + '/' + (wStart.getMonth() + 1), start: Math.floor(wStart.getTime() / 1000), end: Math.floor(wEnd.getTime() / 1000), current: isCurrentW });
-    }
-  } else {
-    // Show 3 past months + current + 2 future = 6 months
-    for (var m = -3; m < 3; m++) {
+
+  if (period === 'months') {
+    for (var m = -6; m < 6; m++) {
       var d = new Date(now.getFullYear(), now.getMonth() + m, 1);
       var dEnd = new Date(now.getFullYear(), now.getMonth() + m + 1, 0, 23, 59, 59, 999);
-      slots.push({ label: tlMn[d.getMonth()], start: Math.floor(d.getTime() / 1000), end: Math.floor(dEnd.getTime() / 1000), current: m === 0 });
+      slots.push({
+        label: tlMn[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2),
+        start: Math.floor(d.getTime() / 1000),
+        end: Math.floor(dEnd.getTime() / 1000),
+        current: m === 0,
+        key: d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2)
+      });
+    }
+  } else if (period === 'quarters') {
+    var curQ = Math.floor(now.getMonth() / 3);
+    for (var q = -4; q < 4; q++) {
+      var qIdx = curQ + q;
+      var yearOffset = Math.floor(qIdx / 4);
+      var qNorm = ((qIdx % 4) + 4) % 4;
+      var qYear = now.getFullYear() + yearOffset;
+      var qStartMonth = qNorm * 3;
+      var d = new Date(qYear, qStartMonth, 1);
+      var dEnd = new Date(qYear, qStartMonth + 3, 0, 23, 59, 59, 999);
+      slots.push({
+        label: 'T' + (qNorm + 1) + ' ' + qYear,
+        start: Math.floor(d.getTime() / 1000),
+        end: Math.floor(dEnd.getTime() / 1000),
+        current: q === 0,
+        key: qYear + '-Q' + (qNorm + 1)
+      });
+    }
+  } else {
+    for (var y = -3; y < 3; y++) {
+      var d = new Date(now.getFullYear() + y, 0, 1);
+      var dEnd = new Date(now.getFullYear() + y, 11, 31, 23, 59, 59, 999);
+      slots.push({
+        label: String(d.getFullYear()),
+        start: Math.floor(d.getTime() / 1000),
+        end: Math.floor(dEnd.getTime() / 1000),
+        current: y === 0,
+        key: String(d.getFullYear())
+      });
     }
   }
 
-  // Collect tasks per slot per agent (overlap-based: task active during slot)
   var agentColors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
   var allAgents = [];
-  var filteredTasks = getFilteredTasks().filter(function(t) { return t.Status !== 'done'; });
-
-  filteredTasks.forEach(function(t) {
-    if (!t.Assignee) return;
-    t.Assignee.split(',').forEach(function(a) {
-      var name = getUserDisplayName(a.trim());
-      if (allAgents.indexOf(name) === -1) allAgents.push(name);
-    });
+  workloadEntries.forEach(function(w) {
+    if (!w.User) return;
+    var name = getUserDisplayName(w.User);
+    if (allAgents.indexOf(name) === -1) allAgents.push(name);
   });
   allAgents.sort();
 
+  if (agentSel) {
+    var currentAgentVal = agentSel.value;
+    var agentHtml = '<option value="">' + t('allAgents') + '</option>';
+    allAgents.forEach(function(name) {
+      var sel = name === currentAgentVal ? ' selected' : '';
+      agentHtml += '<option value="' + sanitize(name) + '"' + sel + '>' + sanitize(name) + '</option>';
+    });
+    agentSel.innerHTML = agentHtml;
+  }
+
   var visibleAgents = agentFilter ? [agentFilter] : allAgents;
 
-  // Build data[slot][agent] = count (task active = overlaps slot)
   var data = slots.map(function(slot) {
-    var row = { label: slot.label, total: 0, current: slot.current };
+    var row = { label: slot.label, total: 0, current: slot.current, key: slot.key };
     visibleAgents.forEach(function(agent) { row[agent] = 0; });
-    filteredTasks.forEach(function(t) {
-      var tS = t.Start_Date ? t.Start_Date : (t.Due_Date || null);
-      var tE = t.Due_Date ? t.Due_Date : (t.Start_Date || null);
-      if (!tE) return;
-      if (tS > slot.end || tE < slot.start) return; // no overlap
-      if (!t.Assignee) return;
-      t.Assignee.split(',').forEach(function(a) {
-        var name = getUserDisplayName(a.trim());
-        if (visibleAgents.indexOf(name) === -1) return;
-        row[name] = (row[name] || 0) + 1;
-        row.total++;
-      });
-    });
     return row;
   });
 
-  var maxVal = Math.max.apply(null, data.map(function(d) { return d.total; }));
-  if (maxVal === 0) maxVal = 1;
+  workloadEntries.forEach(function(w) {
+    if (!w.User || !w.Planned_Hours || w.Planned_Hours <= 0) return;
+    var agentName = getUserDisplayName(w.User);
+    if (visibleAgents.indexOf(agentName) === -1) return;
+
+    var task = tasks.find(function(t) { return t.id === w.Task_Id; });
+    if (!task) return;
+
+    var startTs, endTs;
+    if (w.Subtask_Id) {
+      var st = subtasks.find(function(s) { return s.id === w.Subtask_Id; });
+      if (st) {
+        startTs = st.Start_Date || st.Due_Date || task.Start_Date || task.Due_Date;
+        endTs = st.Due_Date || st.Start_Date || task.Due_Date || task.Start_Date;
+      }
+    }
+    if (!startTs && !endTs) {
+      startTs = task.Start_Date || task.Due_Date;
+      endTs = task.Due_Date || task.Start_Date;
+    }
+
+    if (!startTs && !endTs) {
+      var currentSlot = slots.find(function(s) { return s.current; });
+      if (currentSlot) {
+        var crow = data.find(function(d) { return d.key === currentSlot.key; });
+        if (crow) {
+          crow[agentName] = (crow[agentName] || 0) + w.Planned_Hours;
+          crow.total += w.Planned_Hours;
+        }
+      }
+      return;
+    }
+
+    if (!startTs) startTs = endTs;
+    if (!endTs) endTs = startTs;
+    if (endTs < startTs) { var tmp = startTs; startTs = endTs; endTs = tmp; }
+
+    var totalDuration = endTs - startTs;
+    if (totalDuration <= 0) {
+      var pointSlot = slots.find(function(s) { return startTs >= s.start && startTs <= s.end; });
+      if (pointSlot) {
+        var prow = data.find(function(d) { return d.key === pointSlot.key; });
+        if (prow) {
+          prow[agentName] = (prow[agentName] || 0) + w.Planned_Hours;
+          prow.total += w.Planned_Hours;
+        }
+      }
+      return;
+    }
+
+    slots.forEach(function(slot) {
+      var overlapStart = Math.max(startTs, slot.start);
+      var overlapEnd = Math.min(endTs, slot.end);
+      if (overlapStart >= overlapEnd) return;
+      var overlapDuration = overlapEnd - overlapStart;
+      var ratio = overlapDuration / totalDuration;
+      var hours = w.Planned_Hours * ratio;
+      var row = data.find(function(d) { return d.key === slot.key; });
+      if (row) {
+        row[agentName] = (row[agentName] || 0) + hours;
+        row.total += hours;
+      }
+    });
+  });
+
+  data.forEach(function(row) {
+    row.total = Math.round(row.total * 10) / 10;
+    visibleAgents.forEach(function(agent) {
+      row[agent] = Math.round((row[agent] || 0) * 10) / 10;
+    });
+  });
+
+  var maxVal = Math.max.apply(null, data.map(function(d) { return d.total; }).concat([1]));
   var BAR_H = 120;
+
+  if (allAgents.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">' + (currentLang === 'fr' ? 'Aucune charge planifiée' : 'No planned workload') + '</div>';
+    return;
+  }
 
   var html = '<div style="display:flex;gap:4px;align-items:flex-end;min-height:' + (BAR_H + 50) + 'px;">';
   data.forEach(function(slot) {
     var colStyle = slot.current ? 'flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:#eff6ff;border-radius:6px;padding:2px;' : 'flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;';
     html += '<div style="' + colStyle + '">';
-    html += '<span style="font-size:10px;color:' + (slot.current ? '#2563eb' : '#64748b') + ';font-weight:' + (slot.current ? '700' : '600') + ';">' + (slot.total || '') + '</span>';
+    var totalTxt = slot.total > 0 ? slot.total + 'h' : '';
+    html += '<span style="font-size:10px;color:' + (slot.current ? '#2563eb' : '#64748b') + ';font-weight:' + (slot.current ? '700' : '600') + ';">' + totalTxt + '</span>';
     html += '<div style="width:100%;display:flex;flex-direction:column-reverse;gap:1px;">';
     var stackH = 0;
     visibleAgents.forEach(function(agent, idx) {
-      var count = slot[agent] || 0;
-      if (count === 0) return;
-      var h = Math.max(Math.round((count / maxVal) * BAR_H), 4);
+      var hours = slot[agent] || 0;
+      if (hours === 0) return;
+      var h = Math.max(Math.round((hours / maxVal) * BAR_H), 4);
       stackH += h;
       var color = agentColors[idx % agentColors.length];
-      html += '<div title="' + sanitize(agent) + ' : ' + count + '" style="height:' + h + 'px;background:' + color + ';border-radius:2px;opacity:0.85;"></div>';
+      var hoursTxt = currentLang === 'fr' ? String(hours).replace('.', ',') : String(hours);
+      html += '<div title="' + sanitize(agent) + ' : ' + hoursTxt + 'h" style="height:' + h + 'px;background:' + color + ';border-radius:2px;opacity:0.85;"></div>';
     });
     if (stackH === 0) {
       html += '<div style="height:4px;background:#e2e8f0;border-radius:2px;"></div>';
@@ -9070,7 +9274,6 @@ function renderTimelineChart() {
   });
   html += '</div>';
 
-  // Legend
   if (visibleAgents.length > 1) {
     html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">';
     visibleAgents.forEach(function(agent, idx) {
@@ -9083,99 +9286,83 @@ function renderTimelineChart() {
   container.innerHTML = html;
 }
 
-function renderBurndownChart() {
-  var container = document.getElementById('chart-burndown');
+// --- Délai moyen des tâches et sous-tâches (filtres par produit et par projet) ---
+
+function renderAvgDelayStats() {
+  var container = document.getElementById('stats-avg-delay');
   if (!container) return;
-  var periodSel = document.getElementById('burndown-period');
-  var weeks = periodSel ? parseInt(periodSel.value) || 8 : 8;
 
-  var now = new Date();
-  var dayOfWeek = now.getDay();
-  var mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  var thisMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset);
-  thisMonday.setHours(0, 0, 0, 0);
-
-  var allTasks = getFilteredTasks();
-  var labels = [];
-  var remaining = [];
-  var completed = [];
-
-  for (var w = weeks - 1; w >= 0; w--) {
-    var weekEnd = new Date(thisMonday.getTime() - (w * 7 * 86400000));
-    weekEnd.setDate(weekEnd.getDate() + 6);
-    weekEnd.setHours(23, 59, 59, 999);
-    var weekEndTs = Math.floor(weekEnd.getTime() / 1000);
-
-    var dd = String(weekEnd.getDate()).padStart(2, '0');
-    var mm = String(weekEnd.getMonth() + 1).padStart(2, '0');
-    labels.push(dd + '/' + mm);
-
-    var createdBefore = allTasks.filter(function(t) {
-      return t.Created_At && t.Created_At <= weekEndTs;
+  // Filtre par produit (sélection courante préservée)
+  var prodSel = document.getElementById('stats-delay-product');
+  var productFilter = '';
+  if (prodSel) {
+    var prevProd = prodSel.value;
+    var prodHtml = '<option value="">' + t('allProducts') + '</option>';
+    categories.forEach(function(c) {
+      prodHtml += '<option value="' + sanitize(c.Name) + '"' + (c.Name === prevProd ? ' selected' : '') + '>' + sanitize(c.Name) + '</option>';
     });
-
-    var doneByThen = createdBefore.filter(function(t) {
-      return t.Status === 'done';
-    }).length;
-
-    var totalByThen = createdBefore.length;
-    var remainByThen = totalByThen - doneByThen;
-
-    remaining.push(remainByThen);
-    completed.push(doneByThen);
+    prodSel.innerHTML = prodHtml;
+    productFilter = prodSel.value;
   }
 
-  var maxVal = Math.max.apply(null, remaining.concat(completed).concat([1]));
-  var chartH = 180;
-  var barW = Math.max(20, Math.floor(300 / weeks));
-
-  var html = '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;">';
-  html += '<span style="font-size:11px;display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;flex-shrink:0;"></span>' + t('burnRemaining') + '</span>';
-  html += '<span style="font-size:11px;display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:2px;flex-shrink:0;"></span>' + t('burnCompleted') + '</span>';
-  html += '<span style="font-size:11px;display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border:1.5px dashed #94a3b8;border-radius:2px;flex-shrink:0;"></span>' + t('burnIdeal') + '</span>';
-  html += '</div>';
-
-  html += '<div style="position:relative;height:' + (chartH + 30) + 'px;">';
-
-  // Ideal line (from max remaining at start to 0)
-  var startRemaining = remaining[0] || 0;
-  var svgW = labels.length * (barW + 8);
-  html += '<svg style="position:absolute;top:0;left:0;width:' + svgW + 'px;height:' + chartH + 'px;pointer-events:none;">';
-  for (var li = 0; li < labels.length - 1; li++) {
-    var x1 = li * (barW + 8) + barW / 2;
-    var x2 = (li + 1) * (barW + 8) + barW / 2;
-    var idealVal1 = startRemaining - (startRemaining / (labels.length - 1)) * li;
-    var idealVal2 = startRemaining - (startRemaining / (labels.length - 1)) * (li + 1);
-    var y1 = chartH - (idealVal1 / maxVal) * chartH;
-    var y2 = chartH - (idealVal2 / maxVal) * chartH;
-    html += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#94a3b8" stroke-dasharray="4,3" stroke-width="1.5"/>';
+  // Filtre par projet (sélection courante préservée)
+  var projSel = document.getElementById('stats-delay-project');
+  var projectFilter = '';
+  if (projSel) {
+    var prevProj = projSel.value;
+    var projHtml = '<option value="">' + t('allProjects') + '</option>';
+    projects.forEach(function(p) {
+      projHtml += '<option value="' + p.id + '"' + (String(p.id) === prevProj ? ' selected' : '') + '>' + sanitize(p.Name) + '</option>';
+    });
+    projSel.innerHTML = projHtml;
+    projectFilter = projSel.value;
   }
-  html += '</svg>';
 
-  // Bars
-  html += '<div style="display:flex;align-items:flex-end;gap:8px;height:' + chartH + 'px;">';
-  for (var bi = 0; bi < labels.length; bi++) {
-    var remH = (remaining[bi] / maxVal) * (chartH - 20);
-    var compH = (completed[bi] / maxVal) * (chartH - 20);
-    html += '<div style="display:flex;flex-direction:column;align-items:center;width:' + barW + 'px;">';
-    html += '<div style="font-size:9px;color:#64748b;margin-bottom:2px;">' + remaining[bi] + '</div>';
-    html += '<div style="width:100%;display:flex;flex-direction:column;gap:1px;">';
-    html += '<div style="height:' + remH + 'px;background:#ef4444;border-radius:3px 3px 0 0;min-height:2px;"></div>';
-    html += '<div style="height:' + compH + 'px;background:#22c55e;border-radius:0 0 3px 3px;min-height:2px;"></div>';
-    html += '</div>';
-    html += '</div>';
-  }
-  html += '</div>';
+  // Tâches : délai = échéance − début (en jours)
+  var taskDelays = [];
+  tasks.forEach(function(t) {
+    if (productFilter && t.Category !== productFilter) return;
+    if (projectFilter && String(t.Project_Id) !== projectFilter) return;
+    if (t.Start_Date && t.Due_Date && t.Due_Date >= t.Start_Date) {
+      taskDelays.push((t.Due_Date - t.Start_Date) / 86400);
+    }
+  });
 
-  // Labels
-  html += '<div style="display:flex;gap:8px;margin-top:4px;">';
-  for (var lbi = 0; lbi < labels.length; lbi++) {
-    html += '<div style="width:' + barW + 'px;text-align:center;font-size:9px;color:#94a3b8;">' + labels[lbi] + '</div>';
-  }
-  html += '</div>';
+  // Sous-tâches : idem, produit/projet hérités de la tâche parente
+  var stDelays = [];
+  subtasks.forEach(function(st) {
+    var parent = tasks.find(function(t) { return t.id === st.Parent_Task_Id; });
+    if (!parent) return;
+    if (productFilter && parent.Category !== productFilter) return;
+    if (projectFilter && String(parent.Project_Id) !== projectFilter) return;
+    if (st.Start_Date && st.Due_Date && st.Due_Date >= st.Start_Date) {
+      stDelays.push((st.Due_Date - st.Start_Date) / 86400);
+    }
+  });
 
+  var html = '<div class="avg-delay-figures">';
+  html += avgDelayFigure(t('avgDelayTasks'), taskDelays);
+  html += avgDelayFigure(t('avgDelaySubtasks'), stDelays);
   html += '</div>';
+  html += '<div class="avg-delay-caption">' + t('avgDelayCaption') + '</div>';
   container.innerHTML = html;
+}
+
+// Une figure de l'indicateur : moyenne en jours + nombre d'éléments pris en compte
+function avgDelayFigure(label, delays) {
+  if (delays.length === 0) {
+    return '<div class="avg-delay-figure">' +
+      '<div class="avg-delay-value empty">—</div>' +
+      '<div class="avg-delay-label">' + sanitize(label) + '</div>' +
+      '<div class="avg-delay-count">' + t('avgDelayNoData') + '</div></div>';
+  }
+  var avg = delays.reduce(function(a, b) { return a + b; }, 0) / delays.length;
+  var avgRounded = Math.round(avg * 10) / 10;
+  var avgTxt = (currentLang === 'fr' ? String(avgRounded).replace('.', ',') : String(avgRounded)) + ' ' + t('avgDelayUnit');
+  return '<div class="avg-delay-figure">' +
+    '<div class="avg-delay-value">' + avgTxt + '</div>' +
+    '<div class="avg-delay-label">' + sanitize(label) + '</div>' +
+    '<div class="avg-delay-count">n = ' + delays.length + '</div></div>';
 }
 
 // =============================================================================
@@ -9655,6 +9842,7 @@ var PM_ACL_RULES = [
   { tableId: 'PM_Subtasks',        ownerPerms: '+CRUDS', editorPerms: '+RCU-D' },
   { tableId: 'PM_Comments',        ownerPerms: '+CRUDS', editorPerms: '+RCU-D' },
   { tableId: 'PM_TimeEntries',     ownerPerms: '+CRUDS', editorPerms: '+RCU-D' },
+  { tableId: 'PM_Workload',        ownerPerms: '+CRUDS', editorPerms: '+RCU-D' },
   { tableId: 'PM_CustomFieldValues', ownerPerms: '+CRUDS', editorPerms: '+RCU-D' },
   { tableId: 'PM_CustomFields',    ownerPerms: '+CRUDS', editorPerms: '+R-CUD' },
   { tableId: 'PM_Dependencies',    ownerPerms: '+CRUDS', editorPerms: '+RCU-D' },
