@@ -6746,7 +6746,7 @@ function openEditTaskModal(taskId, preserveAssignees) {
       html += '</div>';
       // Contributeurs (sélection multiple, liste déroulante à cases à cocher)
       stContributorsState[st.id] = (st.Contributors || '').split(',').map(function(a) { return a.trim(); }).filter(Boolean);
-      html += '<div>';
+      html += '<div class="st-span2">';
       html += '<div class="st-pill-label">🤝 ' + t('subtaskContributors') + '</div>';
       html += '<div class="filter-combo st-contrib-combo" id="st-contrib-combo-' + st.id + '"></div>';
       html += '</div>';
