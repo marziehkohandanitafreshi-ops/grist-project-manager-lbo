@@ -144,7 +144,6 @@ var i18n = {
     chartPriority: 'Répartition par priorité',
     chartAssignee: 'Tâches par assigné',
     chartWeek: 'Tâches cette semaine',
-    chartWorkload: 'Charge de travail (risque de surcharge)',
     completionRate: 'Taux de complétion',
     overdueLabel: 'En retard',
     avgTimePerTask: 'Temps moyen/tâche',
@@ -267,8 +266,6 @@ var i18n = {
     workloadNoPeople: 'Aucun responsable ni contributeur',
     noTimeEntries: 'Aucune entrée',
     timeEntryDeleted: 'Entrée supprimée',
-    hours: 'h',
-    minutes: 'min',
     recurrence: 'Récurrence',
     recurrenceNone: 'Aucune',
     recurrenceDaily: 'Quotidienne',
@@ -303,7 +300,7 @@ var i18n = {
     categoryCreated: 'Produit créé',
     categoryDeleted: 'Produit supprimé',
     noCategories: 'Aucun produit',
-    chartTimeline: 'Charge dans le temps par agent',
+    chartTimeline: 'Charge planifiée par agent',
     chartAvgDelay: 'Délai moyen',
     avgDelayCaption: 'Moyenne de (échéance − début), en jours — tâches et sous-tâches',
     avgDelayTasks: 'Tâches',
@@ -333,8 +330,9 @@ var i18n = {
     calWeek: 'Semaine',
     calDay: 'Jour',
     manageRolesTitle: 'Gérer les rôles',
-    byWeek8: 'Par semaine (8 sem.)',
-    byMonth6: 'Par mois (6 mois)',
+    byMonth: 'Par mois',
+    byQuarter: 'Par trimestre',
+    byYear: 'Par année',
     allAgents: 'Tous les agents',
     advancedConfig: 'Configuration avancée',
     mappingSubtitle: 'Mappez vos propres tables et colonnes Grist',
@@ -493,7 +491,6 @@ var i18n = {
     chartPriority: 'Distribution by priority',
     chartAssignee: 'Tasks by assignee',
     chartWeek: 'Tasks this week',
-    chartWorkload: 'Workload (overload risk)',
     completionRate: 'Completion rate',
     overdueLabel: 'Overdue',
     avgTimePerTask: 'Avg time/task',
@@ -620,8 +617,6 @@ var i18n = {
     workloadNoPeople: 'No assignee or contributor',
     noTimeEntries: 'No entries',
     timeEntryDeleted: 'Entry deleted',
-    hours: 'h',
-    minutes: 'min',
     recurrence: 'Recurrence',
     recurrenceNone: 'None',
     recurrenceDaily: 'Daily',
@@ -656,7 +651,7 @@ var i18n = {
     categoryCreated: 'Product created',
     categoryDeleted: 'Product deleted',
     noCategories: 'No products',
-    chartTimeline: 'Workload over time per assignee',
+    chartTimeline: 'Planned workload per agent',
     chartAvgDelay: 'Average delay',
     avgDelayCaption: 'Average of (due date − start date), in days — tasks and subtasks',
     avgDelayTasks: 'Tasks',
@@ -686,8 +681,9 @@ var i18n = {
     calWeek: 'Week',
     calDay: 'Day',
     manageRolesTitle: 'Manage roles',
-    byWeek8: 'By week (8 wks)',
-    byMonth6: 'By month (6 mos)',
+    byMonth: 'By month',
+    byQuarter: 'By quarter',
+    byYear: 'By year',
     allAgents: 'All agents',
     advancedConfig: 'Advanced configuration',
     mappingSubtitle: 'Map your own Grist tables and columns',
@@ -1701,16 +1697,6 @@ function getTaskTotalTime(taskId) {
     total += entries[i].Duration || 0;
   }
   return total;
-}
-
-function formatDuration(seconds) {
-  if (!seconds || seconds < 0) return '0' + t('minutes');
-  var hours = Math.floor(seconds / 3600);
-  var mins = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) {
-    return hours + t('hours') + ' ' + mins + t('minutes');
-  }
-  return mins + t('minutes');
 }
 
 function formatDurationShort(seconds) {
@@ -6883,7 +6869,6 @@ function openEditTaskModal(taskId, preserveAssignees) {
 
   // Time summary
   html += '<div class="time-summary">';
-  html += '<div class="detail-info-row"><span class="info-label">' + t('totalTime') + ' :</span><span class="info-value time-value">' + formatDuration(totalTime) + '</span></div>';
   if (task.Estimated_Hours) {
     var estimatedSec = task.Estimated_Hours * 3600;
     var pctUsed = Math.round((totalTime / estimatedSec) * 100);
@@ -9091,107 +9076,10 @@ function renderStatsView() {
   var avgMinutes = filteredTasks.length > 0 ? Math.round(totalMinutes / filteredTasks.length) : 0;
   var avgHours = Math.round(avgMinutes / 60 * 10) / 10;
   document.getElementById('stats-avg-time').textContent = avgHours + 'h';
-
-  // Workload chart - Risk of overload per user
-  renderWorkloadChart();
+  // Charge planifiée par agent (suivi du temps)
+  renderTimelineChart();
   renderAvgDelayStats();
   renderActivityLog();
-}
-
-function renderWorkloadChart() {
-  var workloadData = {};
-  var now = Math.floor(Date.now() / 1000);
-  var filteredTasks = getFilteredTasks();
-  
-  // Calculate workload for each assignee
-  filteredTasks.forEach(function(task) {
-    if (task.Assignee && task.Status !== 'done') {
-      task.Assignee.split(',').forEach(function(a) {
-        var email = a.trim();
-        var name = getUserDisplayName(email);
-        if (!workloadData[name]) {
-          workloadData[name] = {
-            total: 0,
-            overdue: 0,
-            highPriority: 0,
-            estimatedHours: 0
-          };
-        }
-        workloadData[name].total++;
-        if (task.Due_Date && task.Due_Date < now) {
-          workloadData[name].overdue++;
-        }
-        if (task.Priority === 'high') {
-          workloadData[name].highPriority++;
-        }
-        if (task.Estimated_Hours) {
-          workloadData[name].estimatedHours += task.Estimated_Hours;
-        }
-      });
-    }
-  });
-
-  // Calculate risk score for each user
-  // Score = (tasks * 10) + (overdue * 30) + (highPriority * 15)
-  // Risk levels: 0-50 = low, 51-100 = medium, >100 = high
-  var workloadEntries = Object.entries(workloadData).map(function(entry) {
-    var name = entry[0];
-    var data = entry[1];
-    var score = (data.total * 10) + (data.overdue * 30) + (data.highPriority * 15);
-    var level = score <= 50 ? 'low' : (score <= 100 ? 'medium' : 'high');
-    var levelLabel = currentLang === 'fr' 
-      ? (level === 'low' ? 'OK' : (level === 'medium' ? 'Attention' : 'Surcharge'))
-      : (level === 'low' ? 'OK' : (level === 'medium' ? 'Warning' : 'Overload'));
-    return {
-      name: name,
-      total: data.total,
-      overdue: data.overdue,
-      highPriority: data.highPriority,
-      score: score,
-      level: level,
-      levelLabel: levelLabel
-    };
-  }).sort(function(a, b) { return b.score - a.score; });
-
-  var maxScore = workloadEntries.length > 0 ? Math.max(workloadEntries[0].score, 100) : 100;
-
-  var html = '';
-  if (workloadEntries.length === 0) {
-    html = '<div style="text-align:center;color:#94a3b8;padding:20px;">' + (currentLang === 'fr' ? 'Aucune tâche assignée' : 'No assigned tasks') + '</div>';
-  } else {
-    workloadEntries.forEach(function(entry) {
-      var barWidth = Math.min((entry.score / maxScore) * 100, 100);
-      html += '<div class="workload-row">';
-      html += '<div class="workload-name" title="' + entry.name + '">' + entry.name + '</div>';
-      html += '<div class="workload-bar-bg">';
-      html += '<div class="workload-bar-fill ' + entry.level + '" style="width:' + barWidth + '%"></div>';
-      html += '</div>';
-      html += '<div class="workload-stats">';
-      html += '<span class="workload-badge ' + entry.level + '">' + entry.levelLabel + '</span>';
-      html += '<span class="workload-detail">' + entry.total + ' ' + (currentLang === 'fr' ? 'tâches' : 'tasks');
-      if (entry.overdue > 0) {
-        html += ' • <span style="color:#ef4444;">' + entry.overdue + ' ' + (currentLang === 'fr' ? 'en retard' : 'overdue') + '</span>';
-      }
-      html += '</span>';
-      html += '</div>';
-      html += '</div>';
-    });
-  }
-
-  document.getElementById('chart-workload').innerHTML = html;
-
-  // Populate agent filter and render timeline
-  var agentSelect = document.getElementById('timeline-agent');
-  if (agentSelect) {
-    var agentNames = Object.keys(workloadData).sort();
-    var currentAgentVal = agentSelect.value;
-    agentSelect.innerHTML = '<option value="">' + (currentLang === 'fr' ? 'Tous les agents' : 'All agents') + '</option>';
-    agentNames.forEach(function(name) {
-      var sel = name === currentAgentVal ? ' selected' : '';
-      agentSelect.innerHTML += '<option value="' + sanitize(name) + '"' + sel + '>' + sanitize(name) + '</option>';
-    });
-  }
-  renderTimelineChart();
 }
 
 function renderTimelineChart() {
@@ -9200,7 +9088,7 @@ function renderTimelineChart() {
 
   var periodSel = document.getElementById('timeline-period');
   var agentSel = document.getElementById('timeline-agent');
-  var period = periodSel ? periodSel.value : 'weeks';
+  var period = periodSel ? periodSel.value : 'months';
   var agentFilter = agentSel ? agentSel.value : '';
 
   var now = new Date(); now.setHours(0, 0, 0, 0);
@@ -9208,80 +9096,174 @@ function renderTimelineChart() {
   var tlMn = currentLang === 'fr'
     ? ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
     : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  if (period === 'weeks') {
-    // Show 4 past weeks + current + 3 future = 8 weeks
-    var dayOfW = now.getDay();
-    var offToMon = dayOfW === 0 ? -6 : 1 - dayOfW;
-    var thisMon = new Date(now); thisMon.setDate(thisMon.getDate() + offToMon);
-    for (var w = -4; w < 4; w++) {
-      var wStart = new Date(thisMon); wStart.setDate(thisMon.getDate() + w * 7);
-      var wEnd = new Date(wStart); wEnd.setDate(wStart.getDate() + 6); wEnd.setHours(23, 59, 59, 999);
-      var isCurrentW = w === 0;
-      slots.push({ label: wStart.getDate() + '/' + (wStart.getMonth() + 1), start: Math.floor(wStart.getTime() / 1000), end: Math.floor(wEnd.getTime() / 1000), current: isCurrentW });
-    }
-  } else {
-    // Show 3 past months + current + 2 future = 6 months
-    for (var m = -3; m < 3; m++) {
+
+  if (period === 'months') {
+    for (var m = -6; m < 6; m++) {
       var d = new Date(now.getFullYear(), now.getMonth() + m, 1);
       var dEnd = new Date(now.getFullYear(), now.getMonth() + m + 1, 0, 23, 59, 59, 999);
-      slots.push({ label: tlMn[d.getMonth()], start: Math.floor(d.getTime() / 1000), end: Math.floor(dEnd.getTime() / 1000), current: m === 0 });
+      slots.push({
+        label: tlMn[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2),
+        start: Math.floor(d.getTime() / 1000),
+        end: Math.floor(dEnd.getTime() / 1000),
+        current: m === 0,
+        key: d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2)
+      });
+    }
+  } else if (period === 'quarters') {
+    var curQ = Math.floor(now.getMonth() / 3);
+    for (var q = -4; q < 4; q++) {
+      var qIdx = curQ + q;
+      var yearOffset = Math.floor(qIdx / 4);
+      var qNorm = ((qIdx % 4) + 4) % 4;
+      var qYear = now.getFullYear() + yearOffset;
+      var qStartMonth = qNorm * 3;
+      var d = new Date(qYear, qStartMonth, 1);
+      var dEnd = new Date(qYear, qStartMonth + 3, 0, 23, 59, 59, 999);
+      slots.push({
+        label: 'T' + (qNorm + 1) + ' ' + qYear,
+        start: Math.floor(d.getTime() / 1000),
+        end: Math.floor(dEnd.getTime() / 1000),
+        current: q === 0,
+        key: qYear + '-Q' + (qNorm + 1)
+      });
+    }
+  } else {
+    for (var y = -3; y < 3; y++) {
+      var d = new Date(now.getFullYear() + y, 0, 1);
+      var dEnd = new Date(now.getFullYear() + y, 11, 31, 23, 59, 59, 999);
+      slots.push({
+        label: String(d.getFullYear()),
+        start: Math.floor(d.getTime() / 1000),
+        end: Math.floor(dEnd.getTime() / 1000),
+        current: y === 0,
+        key: String(d.getFullYear())
+      });
     }
   }
 
-  // Collect tasks per slot per agent (overlap-based: task active during slot)
   var agentColors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
   var allAgents = [];
-  var filteredTasks = getFilteredTasks().filter(function(t) { return t.Status !== 'done'; });
-
-  filteredTasks.forEach(function(t) {
-    if (!t.Assignee) return;
-    t.Assignee.split(',').forEach(function(a) {
-      var name = getUserDisplayName(a.trim());
-      if (allAgents.indexOf(name) === -1) allAgents.push(name);
-    });
+  workloadEntries.forEach(function(w) {
+    if (!w.User) return;
+    var name = getUserDisplayName(w.User);
+    if (allAgents.indexOf(name) === -1) allAgents.push(name);
   });
   allAgents.sort();
 
+  if (agentSel) {
+    var currentAgentVal = agentSel.value;
+    var agentHtml = '<option value="">' + t('allAgents') + '</option>';
+    allAgents.forEach(function(name) {
+      var sel = name === currentAgentVal ? ' selected' : '';
+      agentHtml += '<option value="' + sanitize(name) + '"' + sel + '>' + sanitize(name) + '</option>';
+    });
+    agentSel.innerHTML = agentHtml;
+  }
+
   var visibleAgents = agentFilter ? [agentFilter] : allAgents;
 
-  // Build data[slot][agent] = count (task active = overlaps slot)
   var data = slots.map(function(slot) {
-    var row = { label: slot.label, total: 0, current: slot.current };
+    var row = { label: slot.label, total: 0, current: slot.current, key: slot.key };
     visibleAgents.forEach(function(agent) { row[agent] = 0; });
-    filteredTasks.forEach(function(t) {
-      var tS = t.Start_Date ? t.Start_Date : (t.Due_Date || null);
-      var tE = t.Due_Date ? t.Due_Date : (t.Start_Date || null);
-      if (!tE) return;
-      if (tS > slot.end || tE < slot.start) return; // no overlap
-      if (!t.Assignee) return;
-      t.Assignee.split(',').forEach(function(a) {
-        var name = getUserDisplayName(a.trim());
-        if (visibleAgents.indexOf(name) === -1) return;
-        row[name] = (row[name] || 0) + 1;
-        row.total++;
-      });
-    });
     return row;
   });
 
-  var maxVal = Math.max.apply(null, data.map(function(d) { return d.total; }));
-  if (maxVal === 0) maxVal = 1;
+  workloadEntries.forEach(function(w) {
+    if (!w.User || !w.Planned_Hours || w.Planned_Hours <= 0) return;
+    var agentName = getUserDisplayName(w.User);
+    if (visibleAgents.indexOf(agentName) === -1) return;
+
+    var task = tasks.find(function(t) { return t.id === w.Task_Id; });
+    if (!task) return;
+
+    var startTs, endTs;
+    if (w.Subtask_Id) {
+      var st = subtasks.find(function(s) { return s.id === w.Subtask_Id; });
+      if (st) {
+        startTs = st.Start_Date || st.Due_Date || task.Start_Date || task.Due_Date;
+        endTs = st.Due_Date || st.Start_Date || task.Due_Date || task.Start_Date;
+      }
+    }
+    if (!startTs && !endTs) {
+      startTs = task.Start_Date || task.Due_Date;
+      endTs = task.Due_Date || task.Start_Date;
+    }
+
+    if (!startTs && !endTs) {
+      var currentSlot = slots.find(function(s) { return s.current; });
+      if (currentSlot) {
+        var crow = data.find(function(d) { return d.key === currentSlot.key; });
+        if (crow) {
+          crow[agentName] = (crow[agentName] || 0) + w.Planned_Hours;
+          crow.total += w.Planned_Hours;
+        }
+      }
+      return;
+    }
+
+    if (!startTs) startTs = endTs;
+    if (!endTs) endTs = startTs;
+    if (endTs < startTs) { var tmp = startTs; startTs = endTs; endTs = tmp; }
+
+    var totalDuration = endTs - startTs;
+    if (totalDuration <= 0) {
+      var pointSlot = slots.find(function(s) { return startTs >= s.start && startTs <= s.end; });
+      if (pointSlot) {
+        var prow = data.find(function(d) { return d.key === pointSlot.key; });
+        if (prow) {
+          prow[agentName] = (prow[agentName] || 0) + w.Planned_Hours;
+          prow.total += w.Planned_Hours;
+        }
+      }
+      return;
+    }
+
+    slots.forEach(function(slot) {
+      var overlapStart = Math.max(startTs, slot.start);
+      var overlapEnd = Math.min(endTs, slot.end);
+      if (overlapStart >= overlapEnd) return;
+      var overlapDuration = overlapEnd - overlapStart;
+      var ratio = overlapDuration / totalDuration;
+      var hours = w.Planned_Hours * ratio;
+      var row = data.find(function(d) { return d.key === slot.key; });
+      if (row) {
+        row[agentName] = (row[agentName] || 0) + hours;
+        row.total += hours;
+      }
+    });
+  });
+
+  data.forEach(function(row) {
+    row.total = Math.round(row.total * 10) / 10;
+    visibleAgents.forEach(function(agent) {
+      row[agent] = Math.round((row[agent] || 0) * 10) / 10;
+    });
+  });
+
+  var maxVal = Math.max.apply(null, data.map(function(d) { return d.total; }).concat([1]));
   var BAR_H = 120;
+
+  if (allAgents.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">' + (currentLang === 'fr' ? 'Aucune charge planifiée' : 'No planned workload') + '</div>';
+    return;
+  }
 
   var html = '<div style="display:flex;gap:4px;align-items:flex-end;min-height:' + (BAR_H + 50) + 'px;">';
   data.forEach(function(slot) {
     var colStyle = slot.current ? 'flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:#eff6ff;border-radius:6px;padding:2px;' : 'flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;';
     html += '<div style="' + colStyle + '">';
-    html += '<span style="font-size:10px;color:' + (slot.current ? '#2563eb' : '#64748b') + ';font-weight:' + (slot.current ? '700' : '600') + ';">' + (slot.total || '') + '</span>';
+    var totalTxt = slot.total > 0 ? slot.total + 'h' : '';
+    html += '<span style="font-size:10px;color:' + (slot.current ? '#2563eb' : '#64748b') + ';font-weight:' + (slot.current ? '700' : '600') + ';">' + totalTxt + '</span>';
     html += '<div style="width:100%;display:flex;flex-direction:column-reverse;gap:1px;">';
     var stackH = 0;
     visibleAgents.forEach(function(agent, idx) {
-      var count = slot[agent] || 0;
-      if (count === 0) return;
-      var h = Math.max(Math.round((count / maxVal) * BAR_H), 4);
+      var hours = slot[agent] || 0;
+      if (hours === 0) return;
+      var h = Math.max(Math.round((hours / maxVal) * BAR_H), 4);
       stackH += h;
       var color = agentColors[idx % agentColors.length];
-      html += '<div title="' + sanitize(agent) + ' : ' + count + '" style="height:' + h + 'px;background:' + color + ';border-radius:2px;opacity:0.85;"></div>';
+      var hoursTxt = currentLang === 'fr' ? String(hours).replace('.', ',') : String(hours);
+      html += '<div title="' + sanitize(agent) + ' : ' + hoursTxt + 'h" style="height:' + h + 'px;background:' + color + ';border-radius:2px;opacity:0.85;"></div>';
     });
     if (stackH === 0) {
       html += '<div style="height:4px;background:#e2e8f0;border-radius:2px;"></div>';
@@ -9292,7 +9274,6 @@ function renderTimelineChart() {
   });
   html += '</div>';
 
-  // Legend
   if (visibleAgents.length > 1) {
     html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">';
     visibleAgents.forEach(function(agent, idx) {
