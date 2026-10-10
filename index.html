@@ -3606,69 +3606,6 @@
     body.dark-mode .avg-delay-figure { background: #0f172a; border-color: #334155; }
     body.dark-mode .avg-delay-value { color: #e2e8f0; }
     body.dark-mode .avg-delay-label { color: #94a3b8; }
-    /* Workload chart */
-    .workload-container {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .workload-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .workload-name {
-      width: 100px;
-      font-size: 12px;
-      font-weight: 600;
-      color: #1e293b;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .workload-bar-bg {
-      flex: 1;
-      height: 24px;
-      background: #f1f5f9;
-      border-radius: 6px;
-      overflow: hidden;
-      position: relative;
-    }
-    .workload-bar-fill {
-      height: 100%;
-      border-radius: 6px;
-      transition: width 0.3s;
-    }
-    .workload-bar-fill.low { background: linear-gradient(90deg, #22c55e, #4ade80); }
-    .workload-bar-fill.medium { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-    .workload-bar-fill.high { background: linear-gradient(90deg, #ef4444, #f87171); }
-    .workload-stats {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      min-width: 180px;
-    }
-    .workload-badge {
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 10px;
-      font-weight: 700;
-    }
-    .workload-badge.low { background: #dcfce7; color: #16a34a; }
-    .workload-badge.medium { background: #fef3c7; color: #d97706; }
-    .workload-badge.high { background: #fee2e2; color: #dc2626; }
-    .workload-detail {
-      font-size: 10px;
-      color: #64748b;
-    }
-    body.dark-mode .workload-name {
-      color: #f1f5f9;
-    }
-    body.dark-mode .workload-bar-bg {
-      background: #334155;
-    }
-
-    /* ========== GLOBAL SEARCH & HEADER BUTTONS ========== */
     .global-search {
       padding: 8px 12px;
       border: 1px solid #e2e8f0;
@@ -4283,18 +4220,13 @@
         </div>
         <div class="stats-charts-row">
           <div class="stats-chart-card" style="grid-column: span 2;">
-            <h3>⚠️ <span data-i18n="chartWorkload">Charge de travail (risque de surcharge)</span></h3>
-            <div class="workload-container" id="chart-workload"></div>
-          </div>
-        </div>
-        <div class="stats-charts-row">
-          <div class="stats-chart-card" style="grid-column: span 2;">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-              <h3 style="margin:0;">📅 <span data-i18n="chartTimeline">Charge dans le temps par agent</span></h3>
+              <h3 style="margin:0;">👥 <span data-i18n="chartTimeline">Charge planifiée par agent</span></h3>
               <div style="display:flex;gap:8px;align-items:center;">
                 <select id="timeline-period" onchange="renderTimelineChart()" style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
-                  <option value="weeks" data-i18n="byWeek8">Par semaine (8 sem.)</option>
-                  <option value="months" data-i18n="byMonth6">Par mois (6 mois)</option>
+                  <option value="months" data-i18n="byMonth">Par mois</option>
+                  <option value="quarters" data-i18n="byQuarter">Par trimestre</option>
+                  <option value="years" data-i18n="byYear">Par année</option>
                 </select>
                 <select id="timeline-agent" onchange="renderTimelineChart()" style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
                   <option value="" data-i18n="allAgents">Tous les agents</option>
