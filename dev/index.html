@@ -3618,6 +3618,20 @@
     body.dark-mode .stats-summary-value {
       color: #f1f5f9;
     }
+    /* Indicateur délai moyen (stats) */
+    .avg-delay-figures { display: flex; gap: 24px; flex-wrap: wrap; align-items: stretch; }
+    .avg-delay-figure {
+      flex: 1; min-width: 160px; text-align: center; padding: 18px 12px;
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+    }
+    .avg-delay-value { font-size: 26px; font-weight: 800; color: #0f172a; }
+    .avg-delay-value.empty { color: #94a3b8; }
+    .avg-delay-label { font-size: 12px; color: #64748b; margin-top: 4px; }
+    .avg-delay-count { font-size: 11px; color: #94a3b8; }
+    .avg-delay-caption { margin-top: 10px; font-size: 11px; color: #94a3b8; }
+    body.dark-mode .avg-delay-figure { background: #0f172a; border-color: #334155; }
+    body.dark-mode .avg-delay-value { color: #e2e8f0; }
+    body.dark-mode .avg-delay-label { color: #94a3b8; }
     /* Workload chart */
     .workload-container {
       display: flex;
@@ -4319,14 +4333,17 @@
         <div class="stats-charts-row">
           <div class="stats-chart-card" style="grid-column: span 2;">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-              <h3 style="margin:0;">📉 <span data-i18n="chartBurndown">Burndown / Burnup</span></h3>
-              <select id="burndown-period" onchange="renderBurndownChart()" style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
-                <option value="4">4 <span data-i18n="weeks">sem.</span></option>
-                <option value="8" selected>8 <span data-i18n="weeks">sem.</span></option>
-                <option value="12">12 <span data-i18n="weeks">sem.</span></option>
-              </select>
+              <h3 style="margin:0;">⏱️ <span data-i18n="chartAvgDelay">Délai moyen</span></h3>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select id="stats-delay-product" onchange="renderAvgDelayStats()" style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
+                  <option value="" data-i18n="allProducts">Tous les produits</option>
+                </select>
+                <select id="stats-delay-project" onchange="renderAvgDelayStats()" style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
+                  <option value="" data-i18n="allProjects">Tous les projets</option>
+                </select>
+              </div>
             </div>
-            <div id="chart-burndown" style="overflow-x:auto;"></div>
+            <div id="stats-avg-delay"></div>
           </div>
         </div>
         <div class="stats-summary">

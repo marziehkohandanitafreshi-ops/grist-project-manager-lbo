@@ -304,10 +304,13 @@ var i18n = {
     categoryDeleted: 'Produit supprimé',
     noCategories: 'Aucun produit',
     chartTimeline: 'Charge dans le temps par agent',
-    chartBurndown: 'Burndown / Burnup',
-    burnRemaining: 'Restantes',
-    burnCompleted: 'Terminées',
-    burnIdeal: 'Idéal',
+    chartAvgDelay: 'Délai moyen',
+    avgDelayCaption: 'Moyenne de (échéance − début), en jours — tâches et sous-tâches',
+    avgDelayTasks: 'Tâches',
+    avgDelaySubtasks: 'Sous-tâches',
+    avgDelayUnit: 'j',
+    avgDelayNoData: 'Aucune donnée',
+    allProducts: 'Tous les produits',
     activityLog: 'Journal d\'activité',
     activityLogSubtitle: 'Historique des actions récentes',
     actTaskCreated: 'a créé la tâche',
@@ -654,10 +657,13 @@ var i18n = {
     categoryDeleted: 'Product deleted',
     noCategories: 'No products',
     chartTimeline: 'Workload over time per assignee',
-    chartBurndown: 'Burndown / Burnup',
-    burnRemaining: 'Remaining',
-    burnCompleted: 'Completed',
-    burnIdeal: 'Ideal',
+    chartAvgDelay: 'Average delay',
+    avgDelayCaption: 'Average of (due date − start date), in days — tasks and subtasks',
+    avgDelayTasks: 'Tasks',
+    avgDelaySubtasks: 'Subtasks',
+    avgDelayUnit: 'd',
+    avgDelayNoData: 'No data',
+    allProducts: 'All products',
     activityLog: 'Activity Log',
     activityLogSubtitle: 'Recent actions history',
     actTaskCreated: 'created task',
@@ -9007,7 +9013,7 @@ function renderStatsView() {
 
   // Workload chart - Risk of overload per user
   renderWorkloadChart();
-  renderBurndownChart();
+  renderAvgDelayStats();
   renderActivityLog();
 }
 
@@ -9218,99 +9224,83 @@ function renderTimelineChart() {
   container.innerHTML = html;
 }
 
-function renderBurndownChart() {
-  var container = document.getElementById('chart-burndown');
+// --- Délai moyen des tâches et sous-tâches (filtres par produit et par projet) ---
+
+function renderAvgDelayStats() {
+  var container = document.getElementById('stats-avg-delay');
   if (!container) return;
-  var periodSel = document.getElementById('burndown-period');
-  var weeks = periodSel ? parseInt(periodSel.value) || 8 : 8;
 
-  var now = new Date();
-  var dayOfWeek = now.getDay();
-  var mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  var thisMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset);
-  thisMonday.setHours(0, 0, 0, 0);
-
-  var allTasks = getFilteredTasks();
-  var labels = [];
-  var remaining = [];
-  var completed = [];
-
-  for (var w = weeks - 1; w >= 0; w--) {
-    var weekEnd = new Date(thisMonday.getTime() - (w * 7 * 86400000));
-    weekEnd.setDate(weekEnd.getDate() + 6);
-    weekEnd.setHours(23, 59, 59, 999);
-    var weekEndTs = Math.floor(weekEnd.getTime() / 1000);
-
-    var dd = String(weekEnd.getDate()).padStart(2, '0');
-    var mm = String(weekEnd.getMonth() + 1).padStart(2, '0');
-    labels.push(dd + '/' + mm);
-
-    var createdBefore = allTasks.filter(function(t) {
-      return t.Created_At && t.Created_At <= weekEndTs;
+  // Filtre par produit (sélection courante préservée)
+  var prodSel = document.getElementById('stats-delay-product');
+  var productFilter = '';
+  if (prodSel) {
+    var prevProd = prodSel.value;
+    var prodHtml = '<option value="">' + t('allProducts') + '</option>';
+    categories.forEach(function(c) {
+      prodHtml += '<option value="' + sanitize(c.Name) + '"' + (c.Name === prevProd ? ' selected' : '') + '>' + sanitize(c.Name) + '</option>';
     });
-
-    var doneByThen = createdBefore.filter(function(t) {
-      return t.Status === 'done';
-    }).length;
-
-    var totalByThen = createdBefore.length;
-    var remainByThen = totalByThen - doneByThen;
-
-    remaining.push(remainByThen);
-    completed.push(doneByThen);
+    prodSel.innerHTML = prodHtml;
+    productFilter = prodSel.value;
   }
 
-  var maxVal = Math.max.apply(null, remaining.concat(completed).concat([1]));
-  var chartH = 180;
-  var barW = Math.max(20, Math.floor(300 / weeks));
-
-  var html = '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;">';
-  html += '<span style="font-size:11px;display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;flex-shrink:0;"></span>' + t('burnRemaining') + '</span>';
-  html += '<span style="font-size:11px;display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:2px;flex-shrink:0;"></span>' + t('burnCompleted') + '</span>';
-  html += '<span style="font-size:11px;display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border:1.5px dashed #94a3b8;border-radius:2px;flex-shrink:0;"></span>' + t('burnIdeal') + '</span>';
-  html += '</div>';
-
-  html += '<div style="position:relative;height:' + (chartH + 30) + 'px;">';
-
-  // Ideal line (from max remaining at start to 0)
-  var startRemaining = remaining[0] || 0;
-  var svgW = labels.length * (barW + 8);
-  html += '<svg style="position:absolute;top:0;left:0;width:' + svgW + 'px;height:' + chartH + 'px;pointer-events:none;">';
-  for (var li = 0; li < labels.length - 1; li++) {
-    var x1 = li * (barW + 8) + barW / 2;
-    var x2 = (li + 1) * (barW + 8) + barW / 2;
-    var idealVal1 = startRemaining - (startRemaining / (labels.length - 1)) * li;
-    var idealVal2 = startRemaining - (startRemaining / (labels.length - 1)) * (li + 1);
-    var y1 = chartH - (idealVal1 / maxVal) * chartH;
-    var y2 = chartH - (idealVal2 / maxVal) * chartH;
-    html += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#94a3b8" stroke-dasharray="4,3" stroke-width="1.5"/>';
+  // Filtre par projet (sélection courante préservée)
+  var projSel = document.getElementById('stats-delay-project');
+  var projectFilter = '';
+  if (projSel) {
+    var prevProj = projSel.value;
+    var projHtml = '<option value="">' + t('allProjects') + '</option>';
+    projects.forEach(function(p) {
+      projHtml += '<option value="' + p.id + '"' + (String(p.id) === prevProj ? ' selected' : '') + '>' + sanitize(p.Name) + '</option>';
+    });
+    projSel.innerHTML = projHtml;
+    projectFilter = projSel.value;
   }
-  html += '</svg>';
 
-  // Bars
-  html += '<div style="display:flex;align-items:flex-end;gap:8px;height:' + chartH + 'px;">';
-  for (var bi = 0; bi < labels.length; bi++) {
-    var remH = (remaining[bi] / maxVal) * (chartH - 20);
-    var compH = (completed[bi] / maxVal) * (chartH - 20);
-    html += '<div style="display:flex;flex-direction:column;align-items:center;width:' + barW + 'px;">';
-    html += '<div style="font-size:9px;color:#64748b;margin-bottom:2px;">' + remaining[bi] + '</div>';
-    html += '<div style="width:100%;display:flex;flex-direction:column;gap:1px;">';
-    html += '<div style="height:' + remH + 'px;background:#ef4444;border-radius:3px 3px 0 0;min-height:2px;"></div>';
-    html += '<div style="height:' + compH + 'px;background:#22c55e;border-radius:0 0 3px 3px;min-height:2px;"></div>';
-    html += '</div>';
-    html += '</div>';
-  }
-  html += '</div>';
+  // Tâches : délai = échéance − début (en jours)
+  var taskDelays = [];
+  tasks.forEach(function(t) {
+    if (productFilter && t.Category !== productFilter) return;
+    if (projectFilter && String(t.Project_Id) !== projectFilter) return;
+    if (t.Start_Date && t.Due_Date && t.Due_Date >= t.Start_Date) {
+      taskDelays.push((t.Due_Date - t.Start_Date) / 86400);
+    }
+  });
 
-  // Labels
-  html += '<div style="display:flex;gap:8px;margin-top:4px;">';
-  for (var lbi = 0; lbi < labels.length; lbi++) {
-    html += '<div style="width:' + barW + 'px;text-align:center;font-size:9px;color:#94a3b8;">' + labels[lbi] + '</div>';
-  }
-  html += '</div>';
+  // Sous-tâches : idem, produit/projet hérités de la tâche parente
+  var stDelays = [];
+  subtasks.forEach(function(st) {
+    var parent = tasks.find(function(t) { return t.id === st.Parent_Task_Id; });
+    if (!parent) return;
+    if (productFilter && parent.Category !== productFilter) return;
+    if (projectFilter && String(parent.Project_Id) !== projectFilter) return;
+    if (st.Start_Date && st.Due_Date && st.Due_Date >= st.Start_Date) {
+      stDelays.push((st.Due_Date - st.Start_Date) / 86400);
+    }
+  });
 
+  var html = '<div class="avg-delay-figures">';
+  html += avgDelayFigure(t('avgDelayTasks'), taskDelays);
+  html += avgDelayFigure(t('avgDelaySubtasks'), stDelays);
   html += '</div>';
+  html += '<div class="avg-delay-caption">' + t('avgDelayCaption') + '</div>';
   container.innerHTML = html;
+}
+
+// Une figure de l'indicateur : moyenne en jours + nombre d'éléments pris en compte
+function avgDelayFigure(label, delays) {
+  if (delays.length === 0) {
+    return '<div class="avg-delay-figure">' +
+      '<div class="avg-delay-value empty">—</div>' +
+      '<div class="avg-delay-label">' + sanitize(label) + '</div>' +
+      '<div class="avg-delay-count">' + t('avgDelayNoData') + '</div></div>';
+  }
+  var avg = delays.reduce(function(a, b) { return a + b; }, 0) / delays.length;
+  var avgRounded = Math.round(avg * 10) / 10;
+  var avgTxt = (currentLang === 'fr' ? String(avgRounded).replace('.', ',') : String(avgRounded)) + ' ' + t('avgDelayUnit');
+  return '<div class="avg-delay-figure">' +
+    '<div class="avg-delay-value">' + avgTxt + '</div>' +
+    '<div class="avg-delay-label">' + sanitize(label) + '</div>' +
+    '<div class="avg-delay-count">n = ' + delays.length + '</div></div>';
 }
 
 // =============================================================================
