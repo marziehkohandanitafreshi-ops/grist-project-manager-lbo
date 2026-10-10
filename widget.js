@@ -267,8 +267,6 @@ var i18n = {
     workloadNoPeople: 'Aucun responsable ni contributeur',
     noTimeEntries: 'Aucune entrée',
     timeEntryDeleted: 'Entrée supprimée',
-    hours: 'h',
-    minutes: 'min',
     recurrence: 'Récurrence',
     recurrenceNone: 'Aucune',
     recurrenceDaily: 'Quotidienne',
@@ -620,8 +618,6 @@ var i18n = {
     workloadNoPeople: 'No assignee or contributor',
     noTimeEntries: 'No entries',
     timeEntryDeleted: 'Entry deleted',
-    hours: 'h',
-    minutes: 'min',
     recurrence: 'Recurrence',
     recurrenceNone: 'None',
     recurrenceDaily: 'Daily',
@@ -1701,16 +1697,6 @@ function getTaskTotalTime(taskId) {
     total += entries[i].Duration || 0;
   }
   return total;
-}
-
-function formatDuration(seconds) {
-  if (!seconds || seconds < 0) return '0' + t('minutes');
-  var hours = Math.floor(seconds / 3600);
-  var mins = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) {
-    return hours + t('hours') + ' ' + mins + t('minutes');
-  }
-  return mins + t('minutes');
 }
 
 function formatDurationShort(seconds) {
@@ -6883,7 +6869,6 @@ function openEditTaskModal(taskId, preserveAssignees) {
 
   // Time summary
   html += '<div class="time-summary">';
-  html += '<div class="detail-info-row"><span class="info-label">' + t('totalTime') + ' :</span><span class="info-value time-value">' + formatDuration(totalTime) + '</span></div>';
   if (task.Estimated_Hours) {
     var estimatedSec = task.Estimated_Hours * 3600;
     var pctUsed = Math.round((totalTime / estimatedSec) * 100);
