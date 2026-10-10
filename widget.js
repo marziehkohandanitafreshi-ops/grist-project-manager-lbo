@@ -264,6 +264,10 @@ var i18n = {
     totalTime: 'Temps total',
     estimatedTime: 'Temps estimé',
     timeEntries: 'Entrées de temps',
+    workloadPerPerson: 'Charge par personne (prévisionnel)',
+    workloadTaskLevel: 'Tâche',
+    workloadTotal: 'Total prévisionnel',
+    workloadNoPeople: 'Aucun responsable ni contributeur',
     noTimeEntries: 'Aucune entrée',
     timeEntryAdded: 'Temps enregistré',
     timeEntryDeleted: 'Entrée supprimée',
@@ -617,6 +621,10 @@ var i18n = {
     totalTime: 'Total time',
     estimatedTime: 'Estimated time',
     timeEntries: 'Time entries',
+    workloadPerPerson: 'Planned workload per person',
+    workloadTaskLevel: 'Task',
+    workloadTotal: 'Total planned',
+    workloadNoPeople: 'No assignee or contributor',
     noTimeEntries: 'No entries',
     timeEntryAdded: 'Time recorded',
     timeEntryDeleted: 'Entry deleted',
@@ -756,6 +764,7 @@ var stContributorsState = {}; // sélections de contributeurs en cours d'éditio
 var dependencies = [];
 var comments = [];
 var timeEntries = [];
+var workloadEntries = [];
 var customFields = [];
 var customFieldValues = [];
 var categories = [];
@@ -898,6 +907,7 @@ var SUBTASKS_TABLE = 'PM_Subtasks';
 var DEPENDENCIES_TABLE = 'PM_Dependencies';
 var COMMENTS_TABLE = 'PM_Comments';
 var TIME_ENTRIES_TABLE = 'PM_TimeEntries';
+var WORKLOAD_TABLE = 'PM_Workload';
 var CUSTOM_FIELDS_TABLE = 'PM_CustomFields';
 var CUSTOM_FIELD_VALUES_TABLE = 'PM_CustomFieldValues';
 var CATEGORIES_TABLE = 'PM_Categories';
@@ -1990,6 +2000,17 @@ async function ensureTables() {
       ]);
     }
 
+    if (existingTables.indexOf(WORKLOAD_TABLE) === -1) {
+      await grist.docApi.applyUserActions([
+        ['AddTable', WORKLOAD_TABLE, [
+          { id: 'Task_Id', type: 'Int' },
+          { id: 'Subtask_Id', type: 'Int' },
+          { id: 'User', type: 'Text' },
+          { id: 'Planned_Hours', type: 'Numeric' }
+        ]]
+      ]);
+    }
+
     if (existingTables.indexOf(CUSTOM_FIELDS_TABLE) === -1) {
       await grist.docApi.applyUserActions([
         ['AddTable', CUSTOM_FIELDS_TABLE, [
@@ -2582,6 +2603,8 @@ async function loadAllData() {
   } catch (e) {
     timeEntries = [];
   }
+
+  await loadWorkloadEntries();
 
   try {
     var cfData = await grist.docApi.fetchTable(CUSTOM_FIELDS_TABLE);
@@ -6900,6 +6923,9 @@ function openEditTaskModal(taskId, preserveAssignees) {
   }
   html += '</div>';
   
+  // Charge prévisionnelle par personne (rendu après injection de la modale)
+  html += '<div id="workload-section-' + task.id + '"></div>';
+
   // Recent time entries (newest first)
   if (taskTimeEntries.length > 0) {
     html += '<div class="time-entries">';
@@ -7108,6 +7134,8 @@ function openEditTaskModal(taskId, preserveAssignees) {
   taskSubtasks.forEach(function(st) { renderSubtaskAttachmentsSection(st.id); });
   // Listes déroulantes à cases à cocher des contributeurs de chaque sous-tâche
   taskSubtasks.forEach(function(st) { renderStContribCombo(st.id); });
+  // Charge prévisionnelle par personne (bloc suivi du temps)
+  renderWorkloadSection(task.id);
 }
 
 // Suffixe de conteneur DOM pour un rôle RACI. editAssignees -> 'assignee' (et non
@@ -8146,6 +8174,167 @@ async function addManualTimeEntry(taskId) {
     restoreModalScrollTop(scrollPos);    // A3
   } catch (e) {
     console.error('Error adding manual time entry:', e);
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// =============================================================================
+// CHARGE PRÉVISIONNELLE PAR PERSONNE (bloc suivi du temps)
+// =============================================================================
+
+async function loadWorkloadEntries() {
+  try {
+    var data = await grist.docApi.fetchTable(WORKLOAD_TABLE);
+    workloadEntries = [];
+    if (data && data.id) {
+      for (var i = 0; i < data.id.length; i++) {
+        workloadEntries.push({
+          id: data.id[i],
+          Task_Id: data.Task_Id ? data.Task_Id[i] : null,
+          Subtask_Id: data.Subtask_Id ? data.Subtask_Id[i] : null,
+          User: data.User ? data.User[i] : '',
+          Planned_Hours: data.Planned_Hours ? data.Planned_Hours[i] : 0
+        });
+      }
+    }
+  } catch (e) {
+    workloadEntries = [];
+  }
+}
+
+// Liste dédupliquée des personnes d'un champ multi (séparé par des virgules)
+function parsePeopleList(str) {
+  var seen = {};
+  var out = [];
+  (str || '').split(',').forEach(function(s) {
+    var p = s.trim();
+    if (!p) return;
+    var k = p.toLowerCase();
+    if (!seen[k]) { seen[k] = 1; out.push(p); }
+  });
+  return out;
+}
+
+// Personnes concernées par la charge : responsables + contributeurs.
+// Tâche : R (Responsable) + C (Consulté, contributeur) — A et I exclus (non exécutants).
+// Sous-tâche : Responsable (Assignee) + Contributeurs.
+function getWorkloadPeople(responsablesStr, contributeursStr) {
+  var people = [];
+  parsePeopleList(responsablesStr).forEach(function(p) { people.push({ ident: p, role: 'resp' }); });
+  parsePeopleList(contributeursStr).forEach(function(p) { people.push({ ident: p, role: 'contrib' }); });
+  return people;
+}
+
+function getWorkloadHours(taskId, subtaskId, userIdent) {
+  var stId = subtaskId || 0;
+  var entry = workloadEntries.find(function(w) {
+    return w.Task_Id === taskId && (w.Subtask_Id || 0) === stId && w.User === userIdent;
+  });
+  return entry ? (entry.Planned_Hours || 0) : 0;
+}
+
+function formatWorkloadHours(h) {
+  var rounded = Math.round(h * 10) / 10;
+  var txt = currentLang === 'fr' ? String(rounded).replace('.', ',') : String(rounded);
+  return txt + ' h';
+}
+
+function workloadRowHtml(taskId, subtaskId, person) {
+  var h = getWorkloadHours(taskId, subtaskId, person.ident);
+  var roleLabel = person.role === 'resp' ? t('subtaskAssignee') : t('subtaskContributors');
+  var icon = person.role === 'resp' ? '👤' : '🤝';
+  return '<div class="workload-row">' +
+    '<span class="workload-person" title="' + sanitize(roleLabel) + '">' + icon + ' ' + sanitize(getUserDisplayName(person.ident)) + '</span>' +
+    '<input type="number" class="workload-input" min="0" step="0.5" value="' + (h || '') + '" data-wl-task="' + taskId + '" data-wl-st="' + (subtaskId || 0) + '" data-wl-user="' + sanitize(person.ident) + '">' +
+    '<span class="workload-unit">h</span>' +
+    '</div>';
+}
+
+// Rend la section « charge par personne » de la carte suivi du temps :
+// un groupe pour la tâche (R + C), un groupe par sous-tâche (responsable + contributeurs),
+// et le total prévisionnel global.
+function renderWorkloadSection(taskId) {
+  var container = document.getElementById('workload-section-' + taskId);
+  if (!container) return;
+  var task = tasks.find(function(t) { return t.id === taskId; });
+  if (!task) return;
+
+  var html = '<div class="workload-block">';
+  html += '<div class="workload-title">👥 ' + t('workloadPerPerson') + '</div>';
+
+  var grandTotal = 0;
+
+  // Niveau tâche : Responsable (R) + Consulté (C, contributeur)
+  var taskPeople = getWorkloadPeople(task.Assignee, task.Consulted);
+  var taskTotal = 0;
+  var taskRows = '';
+  taskPeople.forEach(function(p) {
+    taskTotal += getWorkloadHours(taskId, 0, p.ident);
+    taskRows += workloadRowHtml(taskId, 0, p);
+  });
+  grandTotal += taskTotal;
+  html += '<div class="workload-group">';
+  html += '<div class="workload-group-label"><span>' + t('workloadTaskLevel') + '</span><span class="workload-group-total">' + formatWorkloadHours(taskTotal) + '</span></div>';
+  html += taskRows || '<div class="workload-empty">' + t('workloadNoPeople') + '</div>';
+  html += '</div>';
+
+  // Niveau sous-tâche : Responsable + Contributeurs
+  getTaskSubtasks(taskId).forEach(function(st) {
+    var stPeople = getWorkloadPeople(st.Assignee, st.Contributors);
+    var stTotal = 0;
+    var stRows = '';
+    stPeople.forEach(function(p) {
+      stTotal += getWorkloadHours(taskId, st.id, p.ident);
+      stRows += workloadRowHtml(taskId, st.id, p);
+    });
+    grandTotal += stTotal;
+    html += '<div class="workload-group">';
+    html += '<div class="workload-group-label"><span>↳ ' + sanitize(st.Title) + '</span><span class="workload-group-total">' + formatWorkloadHours(stTotal) + '</span></div>';
+    html += stRows || '<div class="workload-empty">' + t('workloadNoPeople') + '</div>';
+    html += '</div>';
+  });
+
+  html += '<div class="workload-grand-total">' + t('workloadTotal') + ' : <strong>' + formatWorkloadHours(grandTotal) + '</strong></div>';
+  html += '</div>';
+  container.innerHTML = html;
+
+  // Délégation des changements : l'identifiant est passé en data-* (lu via
+  // getAttribute, dé-échappé par le navigateur) — aucun échappement inline à gérer
+  // pour les noms avec apostrophe.
+  container.querySelectorAll('.workload-input').forEach(function(inp) {
+    inp.addEventListener('change', function() {
+      saveWorkload(parseInt(inp.getAttribute('data-wl-task')), parseInt(inp.getAttribute('data-wl-st')) || 0, inp.getAttribute('data-wl-user'), inp.value);
+    });
+  });
+}
+
+// Enregistre la charge d'une personne (0 ou vide = suppression de la ligne)
+async function saveWorkload(taskId, subtaskId, userIdent, hoursStr) {
+  var hours = parseFloat(hoursStr);
+  if (isNaN(hours) || hours < 0) hours = 0;
+  var stId = subtaskId || 0;
+  var existing = workloadEntries.find(function(w) {
+    return w.Task_Id === taskId && (w.Subtask_Id || 0) === stId && w.User === userIdent;
+  });
+  try {
+    if (hours <= 0) {
+      if (existing) {
+        await grist.docApi.applyUserActions([['RemoveRecord', WORKLOAD_TABLE, existing.id]]);
+      }
+    } else if (existing) {
+      await grist.docApi.applyUserActions([['UpdateRecord', WORKLOAD_TABLE, existing.id, { Planned_Hours: hours }]]);
+    } else {
+      await grist.docApi.applyUserActions([['AddRecord', WORKLOAD_TABLE, null, {
+        Task_Id: taskId,
+        Subtask_Id: stId || null,
+        User: userIdent,
+        Planned_Hours: hours
+      }]]);
+    }
+    await loadWorkloadEntries();
+    renderWorkloadSection(taskId);
+  } catch (e) {
+    console.error('Error saving workload:', e);
     showToast('Error: ' + e.message, 'error');
   }
 }
@@ -9780,6 +9969,7 @@ var PM_ACL_RULES = [
   { tableId: 'PM_Subtasks',        ownerPerms: '+CRUDS', editorPerms: '+RCU-D' },
   { tableId: 'PM_Comments',        ownerPerms: '+CRUDS', editorPerms: '+RCU-D' },
   { tableId: 'PM_TimeEntries',     ownerPerms: '+CRUDS', editorPerms: '+RCU-D' },
+  { tableId: 'PM_Workload',        ownerPerms: '+CRUDS', editorPerms: '+RCU-D' },
   { tableId: 'PM_CustomFieldValues', ownerPerms: '+CRUDS', editorPerms: '+RCU-D' },
   { tableId: 'PM_CustomFields',    ownerPerms: '+CRUDS', editorPerms: '+R-CUD' },
   { tableId: 'PM_Dependencies',    ownerPerms: '+CRUDS', editorPerms: '+RCU-D' },
