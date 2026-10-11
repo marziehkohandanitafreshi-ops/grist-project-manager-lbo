@@ -977,12 +977,13 @@ function todayDateEpoch() {
   return toEpoch(n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0'));
 }
 
-// Date de fin réelle à enregistrer : la valeur saisie dans la modale prime ;
-// sinon date du jour si la tâche est (ou passe à) "done" ; sinon valeur en base.
+// Date de fin réelle à enregistrer : la valeur saisie dans la modale prime
+// (champ vidé = suppression demandée) ; sinon date du jour uniquement au
+// passage à "done" d'une tâche qui ne l'était pas déjà.
 function resolveCompletionDate(task, statusValue, formValue) {
   if (formValue) return toEpoch(formValue);
-  if (statusValue === 'done') return todayDateEpoch();
-  return (task && task.Completion_Date) || null;
+  if (statusValue === 'done' && (!task || task.Status !== 'done')) return todayDateEpoch();
+  return null;
 }
 
 // Champs écrits lors d'un changement de statut hors modale (action rapide,
@@ -7351,7 +7352,8 @@ async function persistTaskFormFields(taskId) {
   if ((el = document.getElementById('task-group'))) setField(record, 'tasks', 'group', el.value);
   if ((el = document.getElementById('task-start'))) setField(record, 'tasks', 'startDate', toEpoch(el.value));
   if ((el = document.getElementById('task-due'))) setField(record, 'tasks', 'dueDate', toEpoch(el.value));
-  if ((el = document.getElementById('task-completion-date'))) setField(record, 'tasks', 'completionDate', resolveCompletionDate(null, (document.getElementById('task-status') || {}).value, el.value));
+  var pTask = tasks.find(function(t) { return t.id === taskId; });
+  if ((el = document.getElementById('task-completion-date'))) setField(record, 'tasks', 'completionDate', resolveCompletionDate(pTask, (document.getElementById('task-status') || {}).value, el.value));
   if ((el = document.getElementById('task-category'))) setField(record, 'tasks', 'category', el.value.trim());
   if ((el = document.getElementById('task-project'))) setField(record, 'tasks', 'projectId', el.value ? parseInt(el.value) : 0);
   if ((el = document.getElementById('task-recurrence'))) setField(record, 'tasks', 'recurrence', el.value);
