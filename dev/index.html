@@ -2727,18 +2727,23 @@
     .subtask-row:hover {
       background: #f1f5f9 !important;
     }
-    /* DoD rattachés à la personne filtrée (vue liste) */
-    .st-dod-filter {
-      font-size: 11px;
-      color: #64748b;
-      padding: 1px 0 1px 36px;
+    /* DoD dépliables sous les sous-tâches (vue tableau) */
+    .dod-row .dod-indent {
       display: flex;
       align-items: center;
       gap: 6px;
+      padding-left: 40px;
+      font-size: 12px;
+      color: #475569;
     }
-    .st-dod-filter .st-dod-check { color: #94a3b8; font-weight: 700; }
-    .st-dod-filter .st-dod-check.done { color: #22c55e; }
-    body.dark-mode .st-dod-filter { color: #94a3b8; }
+    .dod-row .dod-text-done { text-decoration: line-through; color: #94a3b8; }
+    .toggle-btn.st-dod-toggle {
+      padding: 0 5px;
+      margin-left: 6px;
+      font-size: 9px;
+      line-height: 1.4;
+    }
+    body.dark-mode .dod-row .dod-indent { color: #94a3b8; }
     .subtask-indent {
       display: flex;
       align-items: center;
