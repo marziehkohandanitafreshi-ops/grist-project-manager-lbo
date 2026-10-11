@@ -45,6 +45,7 @@ Si vous installez le widget pour la première fois, **aucune configuration n'est
 | **Groupe** | Nom du groupe | Non | Text |
 | **Date début** | Date de début | Non | Date |
 | **Échéance** | Date d'échéance | Non | Date |
+| **Date de fin réelle** | Date réelle de fin — alimentée automatiquement au passage au statut Terminé, modifiable manuellement | Non | Date |
 | **Produit** | Produit de la tâche | Non | Text |
 | **Tag** | Tag associé | Non | Text |
 

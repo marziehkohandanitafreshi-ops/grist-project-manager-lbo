@@ -74,6 +74,7 @@ var i18n = {
     fieldGroup: 'Groupe',
     fieldStartDate: 'Date de début',
     fieldDueDate: 'Échéance',
+    fieldCompletionDate: 'Date de fin réelle',
     fieldCategory: 'Produit',
     fieldEstimatedTime: 'Temps estimé (h)',
     priorityHigh: 'Haute',
@@ -425,6 +426,7 @@ var i18n = {
     fieldGroup: 'Group',
     fieldStartDate: 'Start date',
     fieldDueDate: 'Due date',
+    fieldCompletionDate: 'Actual end date',
     fieldCategory: 'Product',
     fieldEstimatedTime: 'Estimated time (h)',
     priorityHigh: 'High',
@@ -928,6 +930,7 @@ var columnMapping = {
     group: 'Group_Name',
     startDate: 'Start_Date',
     dueDate: 'Due_Date',
+    completionDate: 'Completion_Date',
     category: 'Category',
     tag: 'Tag',
     recurrence: 'Recurrence',
@@ -966,6 +969,32 @@ var currentUserEmail = '';
 // =============================================================================
 // UTILS
 // =============================================================================
+
+// Date de fin réelle : epoch de la date du jour, au même format que les saisies
+// de date du widget (minuit UTC), directement compatible colonne Date Grist.
+function todayDateEpoch() {
+  var n = new Date();
+  return toEpoch(n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0'));
+}
+
+// Date de fin réelle à enregistrer : la valeur saisie dans la modale prime ;
+// sinon date du jour si la tâche est (ou passe à) "done" ; sinon valeur en base.
+function resolveCompletionDate(task, statusValue, formValue) {
+  if (formValue) return toEpoch(formValue);
+  if (statusValue === 'done') return todayDateEpoch();
+  return (task && task.Completion_Date) || null;
+}
+
+// Champs écrits lors d'un changement de statut hors modale (action rapide,
+// drag & drop kanban) : alimente automatiquement la date de fin réelle au
+// passage à "done", sans jamais écraser une valeur saisie manuellement.
+function buildStatusUpdateFields(task, newStatus) {
+  var fields = { Status: newStatus };
+  if (newStatus === 'done' && task && task.Status !== 'done' && !task.Completion_Date) {
+    fields[getColumnName('tasks', 'completionDate')] = todayDateEpoch();
+  }
+  return fields;
+}
 
 function isInsideGrist() {
   try { return window.frameElement !== null || window !== window.parent; }
@@ -1873,6 +1902,7 @@ async function ensureTables() {
           { id: 'Group_Name', type: 'Text' },
           { id: 'Start_Date', type: 'Date' },
           { id: 'Due_Date', type: 'Date' },
+          { id: 'Completion_Date', type: 'Date' },
           { id: 'Category', type: 'Text' },
           { id: 'Tag', type: 'Text' },
           { id: 'Recurrence', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['none', 'daily', 'weekly', 'monthly'] }) },
@@ -2129,6 +2159,7 @@ async function ensureTables() {
         ['task_group', TASKS_TABLE, 'Group_Name', 'Groupe', false, 'Group_Name'],
         ['task_start_date', TASKS_TABLE, 'Start_Date', 'Date début', false, 'Start_Date'],
         ['task_due_date', TASKS_TABLE, 'Due_Date', 'Échéance', false, 'Due_Date'],
+        ['task_completion_date', TASKS_TABLE, 'Completion_Date', 'Date de fin réelle', false, 'Completion_Date'],
         ['task_category', TASKS_TABLE, 'Category', 'Produit', false, 'Category'],
         ['task_tag', TASKS_TABLE, 'Tag', 'Tag', false, 'Tag'],
         ['task_recurrence', TASKS_TABLE, 'Recurrence', 'Récurrence', false, 'Recurrence'],
@@ -2247,6 +2278,9 @@ async function ensureTables() {
         if (existingCols.indexOf('Auto_Extend') === -1) {
           await grist.docApi.applyUserActions([['AddColumn', TASKS_TABLE, 'Auto_Extend', { type: 'Bool' }]]);
         }
+        if (existingCols.indexOf('Completion_Date') === -1) {
+          await grist.docApi.applyUserActions([['AddColumn', TASKS_TABLE, 'Completion_Date', { type: 'Date' }]]);
+        }
       } catch (migrationErr) {
         console.log('Migration check completed or columns already exist');
       }
@@ -2359,6 +2393,7 @@ async function loadAllData() {
         var groupCol = getColumnName('tasks', 'group');
         var startDateCol = getColumnName('tasks', 'startDate');
         var dueDateCol = getColumnName('tasks', 'dueDate');
+        var completionDateCol = getColumnName('tasks', 'completionDate');
         var categoryCol = getColumnName('tasks', 'category');
         var tagCol = getColumnName('tasks', 'tag');
         var recurrenceCol = getColumnName('tasks', 'recurrence');
@@ -2374,6 +2409,7 @@ async function loadAllData() {
         task.Group_Name = taskData[groupCol] ? taskData[groupCol][i] : '';
         task.Start_Date = taskData[startDateCol] ? taskData[startDateCol][i] : null;
         task.Due_Date = taskData[dueDateCol] ? taskData[dueDateCol][i] : null;
+        task.Completion_Date = taskData[completionDateCol] ? taskData[completionDateCol][i] : null;
         task.Category = taskData[categoryCol] ? taskData[categoryCol][i] : '';
         task.Tag = taskData[tagCol] ? taskData[tagCol][i] : '';
         task.Recurrence = taskData[recurrenceCol] ? taskData[recurrenceCol][i] : 'none';
@@ -4345,6 +4381,10 @@ async function onDrop(e) {
         record[field] = newValue ? parseInt(newValue) : null;
       } else {
         record[field] = newValue;
+        if (field === 'Status') {
+          Object.assign(record, buildStatusUpdateFields(draggedTask, newValue));
+          if (record[getColumnName('tasks', 'completionDate')] !== undefined) draggedTask.Completion_Date = record[getColumnName('tasks', 'completionDate')];
+        }
       }
       await grist.docApi.applyUserActions([['UpdateRecord', TASKS_TABLE, draggedTaskId, record]]);
       for (var i = 0; i < tasks.length; i++) {
@@ -6483,6 +6523,7 @@ function openEditTaskModal(taskId, preserveAssignees) {
 
   var startVal = task.Start_Date ? new Date(task.Start_Date * 1000).toISOString().split('T')[0] : '';
   var dueVal = task.Due_Date ? new Date(task.Due_Date * 1000).toISOString().split('T')[0] : '';
+  var completionVal = task.Completion_Date ? new Date(task.Completion_Date * 1000).toISOString().split('T')[0] : '';
 
   // Progress calculation based on subtasks
   var progressPct = getTaskProgress(task);
@@ -6567,6 +6608,12 @@ function openEditTaskModal(taskId, preserveAssignees) {
   html += '<span class="detail-field-icon">⏰</span>';
   html += '<span class="detail-field-label">' + t('fieldDueDate') + '</span>';
   html += '<div class="detail-field-value"><input type="date" id="task-due" value="' + dueVal + '" /></div>';
+  html += '</div>';
+
+  html += '<div class="detail-field">';
+  html += '<span class="detail-field-icon">🏁</span>';
+  html += '<span class="detail-field-label">' + t('fieldCompletionDate') + '</span>';
+  html += '<div class="detail-field-value"><input type="date" id="task-completion-date" value="' + completionVal + '" /></div>';
   html += '</div>';
 
   // Priority
@@ -6837,6 +6884,7 @@ function openEditTaskModal(taskId, preserveAssignees) {
   html += '<div class="progress-bar-bg"><div class="progress-bar-fill ' + barClass + '" style="width:' + progressPct + '%"></div></div>';
   html += '<div class="detail-info-row"><span class="info-label">' + t('startLabel') + '</span><span class="info-value">' + (startVal ? formatDate(task.Start_Date) : '--') + '</span></div>';
   html += '<div class="detail-info-row"><span class="info-label">' + t('dueLabel') + '</span><span class="info-value" style="' + (isOverdue(task) ? 'color:#dc2626;' : '') + '">' + (dueVal ? formatDate(task.Due_Date) : '--') + (isOverdue(task) ? ' ⚠️' : '') + '</span></div>';
+  html += '<div class="detail-info-row"><span class="info-label">' + t('fieldCompletionDate') + ' :</span><span class="info-value">' + (task.Completion_Date ? formatDate(task.Completion_Date) : '--') + '</span></div>';
   html += '</div>';
 
   // Quick actions card
@@ -7255,7 +7303,7 @@ async function quickAction(taskId, newStatus) {
 
   try {
     await grist.docApi.applyUserActions([
-      ['UpdateRecord', TASKS_TABLE, taskId, { Status: newStatus }]
+      ['UpdateRecord', TASKS_TABLE, taskId, buildStatusUpdateFields(task, newStatus)]
     ]);
     for (var i = 0; i < tasks.length; i++) {
       if (tasks[i].id === taskId) { tasks[i].Status = newStatus; break; }
@@ -7303,6 +7351,7 @@ async function persistTaskFormFields(taskId) {
   if ((el = document.getElementById('task-group'))) setField(record, 'tasks', 'group', el.value);
   if ((el = document.getElementById('task-start'))) setField(record, 'tasks', 'startDate', toEpoch(el.value));
   if ((el = document.getElementById('task-due'))) setField(record, 'tasks', 'dueDate', toEpoch(el.value));
+  if ((el = document.getElementById('task-completion-date'))) setField(record, 'tasks', 'completionDate', resolveCompletionDate(null, (document.getElementById('task-status') || {}).value, el.value));
   if ((el = document.getElementById('task-category'))) setField(record, 'tasks', 'category', el.value.trim());
   if ((el = document.getElementById('task-project'))) setField(record, 'tasks', 'projectId', el.value ? parseInt(el.value) : 0);
   if ((el = document.getElementById('task-recurrence'))) setField(record, 'tasks', 'recurrence', el.value);
@@ -8629,6 +8678,8 @@ async function createTask() {
     setField(record, 'tasks', 'tag', tagEl.value.trim());
   }
 
+  if (document.getElementById('task-status').value === 'done') setField(record, 'tasks', 'completionDate', todayDateEpoch());
+
   try {
     var createResult = await grist.docApi.applyUserActions([
       ['AddRecord', TASKS_TABLE, null, record]
@@ -8660,6 +8711,7 @@ async function updateTask(taskId) {
   var task = tasks.find(function(t) { return t.id === taskId; });
   var wasNotDone = task && task.Status !== 'done';
   var newStatus = document.getElementById('task-status').value;
+  var completionDateEl = document.getElementById('task-completion-date');
 
   if (newStatus === 'done' && isTaskBlocked(taskId)) {
     var blockers = getTaskDependencies(taskId).filter(function(b) { return b && b.Status !== 'done'; });
@@ -8691,6 +8743,7 @@ async function updateTask(taskId) {
   setField(record, 'tasks', 'category', document.getElementById('task-category').value.trim());
   setField(record, 'tasks', 'projectId', projectId);
   setField(record, 'tasks', 'recurrence', newRecurrence);
+  setField(record, 'tasks', 'completionDate', resolveCompletionDate(task, newStatus, completionDateEl ? completionDateEl.value : ''));
   
   // Add Tag only if the element exists
   var tagEl = document.getElementById('task-tag');
