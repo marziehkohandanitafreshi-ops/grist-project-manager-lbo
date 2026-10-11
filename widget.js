@@ -4595,9 +4595,16 @@ function renderTableView() {
       var stOverdue = st.Due_Date && !st.Completed && st.Due_Date < _nowSec;
       // DoD de la sous-tâche : lignes dépliables au niveau en dessous (vue tableau)
       var stDodList = getDoD(st);
+      // Filtre personne : ne montrer que les critères rattachés à la personne,
+      // en conservant l'index d'origine (les cases pointent sur la liste complète).
+      var stDodShown = stDodList.map(function(d, di) { return { d: d, di: di }; });
+      if (currentFilterAssignee) {
+        var stDodIdSet = personIdentSet(currentFilterAssignee);
+        stDodShown = stDodShown.filter(function(x) { return x.d.assignee && assigneeListHas(x.d.assignee, stDodIdSet); });
+      }
       // Colonne Tâche (titre)
       var stMilestoneMark = (st.Type === 'milestone') ? '<span title="Jalon" style="color:#7c3aed;margin-right:3px;">◆</span>' : '';
-      html += '<td><div class="subtask-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="subtask-checkbox" ' + (st.Completed ? 'checked' : '') + ' onclick="event.stopPropagation();toggleSubtask(' + st.id + ', ' + !st.Completed + ', this)" style="cursor:pointer;width:14px;height:14px;margin-right:6px;flex-shrink:0;" />' + stMilestoneMark + '<span class="subtask-name' + (st.Completed ? ' completed' : '') + '">' + sanitize(st.Title) + '</span></div>' + (stDodList.length > 0 ? '<button class="toggle-btn st-dod-toggle" data-st-id="' + st.id + '" id="st-dod-toggle-' + st.id + '" onclick="event.stopPropagation(); toggleTableDoD(' + st.id + ')" title="DoD">▶</button>' : '') + '</div></td>';
+      html += '<td><div class="subtask-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="subtask-checkbox" ' + (st.Completed ? 'checked' : '') + ' onclick="event.stopPropagation();toggleSubtask(' + st.id + ', ' + !st.Completed + ', this)" style="cursor:pointer;width:14px;height:14px;margin-right:6px;flex-shrink:0;" />' + stMilestoneMark + '<span class="subtask-name' + (st.Completed ? ' completed' : '') + '">' + sanitize(st.Title) + '</span></div>' + (stDodShown.length > 0 ? '<button class="toggle-btn st-dod-toggle" data-st-id="' + st.id + '" id="st-dod-toggle-' + st.id + '" onclick="event.stopPropagation(); toggleTableDoD(' + st.id + ')" title="DoD">▶</button>' : '') + '</div></td>';
       // Projet (vide : hérité du parent)
       html += '<td></td>';
       // Statut (couleur réelle du statut personnalisé)
@@ -4622,10 +4629,10 @@ function renderTableView() {
       html += '<td></td>';
       html += '</tr>';
       // DoD : lignes au niveau en dessous de la sous-tâche, pliables/dépliables
-      for (var sdi = 0; sdi < stDodList.length; sdi++) {
-        var sd = stDodList[sdi];
+      for (var sdi = 0; sdi < stDodShown.length; sdi++) {
+        var sd = stDodShown[sdi].d;
         html += '<tr class="dod-row" data-parent="' + task.id + '" data-st-parent="' + st.id + '" style="display:none;">';
-        html += '<td><div class="dod-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="dod-checkbox" ' + (sd.done ? 'checked' : '') + ' onchange="toggleDoD(' + st.id + ', ' + sdi + ', this.checked)" style="cursor:pointer;width:14px;height:14px;flex-shrink:0;" />';
+        html += '<td><div class="dod-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="dod-checkbox" ' + (sd.done ? 'checked' : '') + ' onchange="toggleDoD(' + st.id + ', ' + stDodShown[sdi].di + ', this.checked)" style="cursor:pointer;width:14px;height:14px;flex-shrink:0;" />';
         html += '<span class="dod-text' + (sd.done ? ' dod-text-done' : '') + '">' + sanitize(sd.text || '') + '</span>';
         html += '</div></td>';
         html += '<td></td><td></td><td></td><td></td><td>' + (sd.assignee ? '<span class="assignee-chip">👤 ' + sanitize(sd.assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ')) + '</span>' : '') + '</td><td></td><td></td><td></td>';
