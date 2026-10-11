@@ -4627,9 +4627,8 @@ function renderTableView() {
         html += '<tr class="dod-row" data-parent="' + task.id + '" data-st-parent="' + st.id + '" style="display:none;">';
         html += '<td><div class="dod-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="dod-checkbox" ' + (sd.done ? 'checked' : '') + ' onchange="toggleDoD(' + st.id + ', ' + sdi + ', this.checked)" style="cursor:pointer;width:14px;height:14px;flex-shrink:0;" />';
         html += '<span class="dod-text' + (sd.done ? ' dod-text-done' : '') + '">' + sanitize(sd.text || '') + '</span>';
-        if (sd.assignee) html += '<span class="subtask-assignee-badge">👤 ' + sanitize(sd.assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ')) + '</span>';
         html += '</div></td>';
-        html += '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+        html += '<td></td><td></td><td></td><td></td><td>' + (sd.assignee ? '<span class="assignee-chip">👤 ' + sanitize(sd.assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ')) + '</span>' : '') + '</td><td></td><td></td><td></td>';
         html += '</tr>';
       }
     }
