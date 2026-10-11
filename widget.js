@@ -1191,13 +1191,20 @@ function getTaskSubtasks(taskId) {
 }
 
 // Sous-tâches rattachées à une tâche dans les vues : uniquement celles
-// assignées à la personne filtrée quand le filtre Personne est actif
+// assignées à la personne filtrée, ou portant un DoD qui lui est rattaché,
 // (la tâche parente reste visible, avec zéro sous-tâche le cas échéant).
+// Un critère DoD de la sous-tâche est-il rattaché à la personne (filtre Personne) ?
+function subtaskHasPersonDoD(subtask, identSet) {
+  return getDoD(subtask).some(function(d) {
+    return d.assignee && assigneeListHas(d.assignee, identSet);
+  });
+}
+
 function getVisibleTaskSubtasks(taskId) {
   var list = getTaskSubtasks(taskId);
   if (currentFilterAssignee) {
     var identSet = personIdentSet(currentFilterAssignee);
-    list = list.filter(function(st) { return assigneeListHas(st.Assignee, identSet); });
+    list = list.filter(function(st) { return assigneeListHas(st.Assignee, identSet) || subtaskHasPersonDoD(st, identSet); });
   }
   if (currentFilterTag) {
     var tagKey = String(currentFilterTag).trim();
@@ -3361,7 +3368,8 @@ function getFilteredTasks() {
     result = result.filter(function(t) {
       if (assigneeListHas(t.Assignee, identSet)) return true;
       // La tâche parente reste visible si une de ses sous-tâches est assignée à la personne
-      return getTaskSubtasks(t.id).some(function(st) { return assigneeListHas(st.Assignee, identSet); });
+      // ou porte un critère DoD rattaché à la personne
+      return getTaskSubtasks(t.id).some(function(st) { return assigneeListHas(st.Assignee, identSet) || subtaskHasPersonDoD(st, identSet); });
     });
   }
   if (currentFilterCategory) {
@@ -4556,9 +4564,19 @@ function renderTableView() {
       var stDotClass = st.Priority === 'high' ? 'dot-high' : (st.Priority === 'medium' ? 'dot-medium' : 'dot-low');
       var stAssignee = st.Assignee ? st.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : '';
       var stOverdue = st.Due_Date && !st.Completed && st.Due_Date < _nowSec;
+      // DoD rattachés à la personne filtrée : critères affichés sous la sous-tâche
+      var stDodHtml = '';
+      if (currentFilterAssignee) {
+        var stDodIdSet = personIdentSet(currentFilterAssignee);
+        getDoD(st).forEach(function(d) {
+          if (d.assignee && assigneeListHas(d.assignee, stDodIdSet)) {
+            stDodHtml += '<div class="st-dod-filter"><span class="st-dod-check' + (d.done ? ' done' : '') + '">' + (d.done ? '✓' : '○') + '</span>' + sanitize(d.text || '') + '</div>';
+          }
+        });
+      }
       // Colonne Tâche (titre)
       var stMilestoneMark = (st.Type === 'milestone') ? '<span title="Jalon" style="color:#7c3aed;margin-right:3px;">◆</span>' : '';
-      html += '<td><div class="subtask-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="subtask-checkbox" ' + (st.Completed ? 'checked' : '') + ' onclick="event.stopPropagation();toggleSubtask(' + st.id + ', ' + !st.Completed + ', this)" style="cursor:pointer;width:14px;height:14px;margin-right:6px;flex-shrink:0;" />' + stMilestoneMark + '<span class="subtask-name' + (st.Completed ? ' completed' : '') + '">' + sanitize(st.Title) + '</span></div></td>';
+      html += '<td><div class="subtask-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="subtask-checkbox" ' + (st.Completed ? 'checked' : '') + ' onclick="event.stopPropagation();toggleSubtask(' + st.id + ', ' + !st.Completed + ', this)" style="cursor:pointer;width:14px;height:14px;margin-right:6px;flex-shrink:0;" />' + stMilestoneMark + '<span class="subtask-name' + (st.Completed ? ' completed' : '') + '">' + sanitize(st.Title) + '</span></div>' + stDodHtml + '</td>';
       // Projet (vide : hérité du parent)
       html += '<td></td>';
       // Statut (couleur réelle du statut personnalisé)
