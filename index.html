@@ -2632,18 +2632,21 @@
     .st-contrib-combo { width: 100%; }
     .st-contrib-combo .filter-combo-btn { width: 100%; max-width: none; justify-content: space-between; }
     .st-contrib-combo .filter-combo-dd { min-width: 100%; max-width: none; }
-    .st-hours-input {
-      width: 90px;
-      padding: 7px 10px;
-      border: 1px solid #e2e8f0;
-      border-radius: 7px;
-      font-size: 13px;
-      font-family: inherit;
-      background: #fff;
-      color: inherit;
-      outline: none;
+    .st-date-field {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 120px;
+      flex: 1;
     }
-    .st-hours-input:focus { border-color: #6366f1; }
+    .st-date-field .subtask-edit-date { width: 100%; }
+    .st-date-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: #64748b;
+    }
     /* Save/Cancel buttons */
     .st-form-actions { display: flex; gap: 6px; justify-content: flex-end; }
     .subtask-save-btn {
@@ -2678,7 +2681,7 @@
     body.dark-mode .subtask-edit-select,
     body.dark-mode .subtask-edit-date,
     body.dark-mode .st-dep-select { background: #0f172a; border-color: #334155; color: #e2e8f0; }
-    body.dark-mode .st-hours-input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+    body.dark-mode .st-date-label { color: #94a3b8; }
     body.dark-mode .st-pill { border-color: #334155; color: #94a3b8; }
     body.dark-mode .st-pill:hover { border-color: #475569; color: #e2e8f0; }
     body.dark-mode .subtask-cancel-btn { border-color: #334155; color: #64748b; }

@@ -236,7 +236,9 @@ var i18n = {
     dodCriterionDeleted: 'Critère DoD supprimé',
     dodCriterionUpdated: 'Critère DoD mis à jour',
     dodIncomplete: 'DoD incomplet : cochez tous les critères pour terminer la sous-tâche',
+    subtaskStartDate: 'Début',
     subtaskDueDate: 'Échéance',
+    subtaskCompletionDate: 'Fin réelle',
     noAssignee: 'Non assigné',
     dependencies: 'Dépendances',
     blockedBy: 'Bloqué par',
@@ -588,7 +590,9 @@ var i18n = {
     dodCriterionDeleted: 'DoD criterion deleted',
     dodCriterionUpdated: 'DoD criterion updated',
     dodIncomplete: 'Incomplete DoD: check all criteria to complete the subtask',
+    subtaskStartDate: 'Start',
     subtaskDueDate: 'Due date',
+    subtaskCompletionDate: 'Actual end',
     noAssignee: 'Unassigned',
     dependencies: 'Dependencies',
     blockedBy: 'Blocked by',
@@ -995,6 +999,16 @@ function buildStatusUpdateFields(task, newStatus) {
     fields[getColumnName('tasks', 'completionDate')] = todayDateEpoch();
   }
   return fields;
+}
+
+// Fin réelle d'une sous-tâche : la valeur saisie dans le formulaire prime ;
+// sinon date du jour au passage à terminée ; champ vidé reste vidé
+// (suppression manuelle respectée).
+function resolveSubtaskCompletion(subtask, willBeDone, formValue) {
+  if (formValue) return toEpoch(formValue);
+  var wasDone = subtask && (subtask.Completed || subtask.Status === 'done');
+  if (willBeDone && !wasDone) return todayDateEpoch();
+  return null;
 }
 
 function isInsideGrist() {
@@ -1962,6 +1976,7 @@ async function ensureTables() {
           { id: 'Contributors', type: 'Text' },
           { id: 'Tag', type: 'Text' },
           { id: 'Due_Date', type: 'Date' },
+          { id: 'Completion_Date', type: 'Date' },
           { id: 'Estimated_Hours', type: 'Numeric' },
           { id: 'Completed', type: 'Bool' },
           { id: 'Order', type: 'Int' },
@@ -2308,6 +2323,9 @@ async function ensureTables() {
         if (stCols.indexOf('Due_Date') === -1) {
           stActions.push(['AddColumn', SUBTASKS_TABLE, 'Due_Date', { type: 'Date' }]);
         }
+        if (stCols.indexOf('Completion_Date') === -1) {
+          stActions.push(['AddColumn', SUBTASKS_TABLE, 'Completion_Date', { type: 'Date' }]);
+        }
         if (stCols.indexOf('Description') === -1) {
           stActions.push(['AddColumn', SUBTASKS_TABLE, 'Description', { type: 'Text' }]);
         }
@@ -2525,6 +2543,7 @@ async function loadAllData() {
           Contributors: subtaskData.Contributors ? subtaskData.Contributors[i] : '',
           Tag: subtaskData.Tag ? subtaskData.Tag[i] : '',
           Due_Date: subtaskData.Due_Date ? subtaskData.Due_Date[i] : null,
+          Completion_Date: subtaskData.Completion_Date ? subtaskData.Completion_Date[i] : null,
           Start_Date: subtaskData.Start_Date ? subtaskData.Start_Date[i] : null,
           Estimated_Hours: subtaskData.Estimated_Hours ? subtaskData.Estimated_Hours[i] : null,
           Recurrence: subtaskData.Recurrence ? subtaskData.Recurrence[i] : 'none',
@@ -3999,6 +4018,7 @@ async function toggleSubtaskFromCard(subtaskId, completed, el) {
   }
   try {
     var fields = { Completed: completed };
+    if (completed && subtask && !subtask.Completed && !subtask.Completion_Date) fields.Completion_Date = todayDateEpoch();
     var clearedDoD = null;
     if (subtask && !completed && getDoD(subtask).length > 0) {
       clearedDoD = copyDoD(subtask).map(function(d) { d.done = false; return d; });
@@ -4008,7 +4028,7 @@ async function toggleSubtaskFromCard(subtaskId, completed, el) {
       ['UpdateRecord', SUBTASKS_TABLE, subtaskId, fields]
     ]);
     for (var i = 0; i < subtasks.length; i++) {
-      if (subtasks[i].id === subtaskId) { subtasks[i].Completed = completed; if (clearedDoD) subtasks[i].DefinitionOfDone = clearedDoD; break; }
+      if (subtasks[i].id === subtaskId) { subtasks[i].Completed = completed; if (fields.Completion_Date !== undefined) subtasks[i].Completion_Date = fields.Completion_Date; if (clearedDoD) subtasks[i].DefinitionOfDone = clearedDoD; break; }
     }
     renderKanbanView();
   } catch (e) {
@@ -4624,11 +4644,12 @@ async function toggleSubtaskFromTable(subtaskId, completed) {
   
   try {
     await grist.docApi.applyUserActions([
-      ['UpdateRecord', SUBTASKS_TABLE, subtaskId, { Completed: completed }]
+      ['UpdateRecord', SUBTASKS_TABLE, subtaskId, Object.assign({ Completed: completed }, (completed && subtask && !subtask.Completed && !subtask.Completion_Date) ? { Completion_Date: todayDateEpoch() } : {})]
     ]);
     // Update local state
     for (var i = 0; i < subtasks.length; i++) {
       if (subtasks[i].id === subtaskId) {
+        if (completed && subtask && !subtask.Completed && !subtask.Completion_Date) subtasks[i].Completion_Date = todayDateEpoch();
         subtasks[i].Completed = completed;
         break;
       }
@@ -6721,7 +6742,7 @@ function openEditTaskModal(taskId, preserveAssignees) {
         });
       }
       if (stDueDateStr) html += '<span class="subtask-due-badge' + stDueClass + '">📅 ' + stDueDateStr + '</span>';
-      if (st.Estimated_Hours) html += '<span class="subtask-assignee-badge">⏱ ' + st.Estimated_Hours + 'h</span>';
+      if (st.Completion_Date) html += '<span class="subtask-due-badge">🏁 ' + new Date(st.Completion_Date * 1000).toLocaleDateString(currentLang === 'fr' ? 'fr-FR' : 'en-US', { day: '2-digit', month: '2-digit', year: 'numeric' }) + '</span>';
       html += '</span>';
       html += '<button class="subtask-edit-btn" onclick="startEditSubtask(' + st.id + ', ' + task.id + ')" title="' + t('editSubtask') + '">✏️</button>';
       html += '<button class="subtask-delete" onclick="deleteSubtask(' + st.id + ', ' + task.id + ')" title="' + t('delete') + '">✕</button>';
@@ -6799,12 +6820,13 @@ function openEditTaskModal(taskId, preserveAssignees) {
       html += '<div class="st-pill-label">🤝 ' + t('subtaskContributors') + '</div>';
       html += '<div class="filter-combo st-contrib-combo" id="st-contrib-combo-' + st.id + '"></div>';
       html += '</div>';
-      // Date + hours row
+      // Dates : Début / Échéance / Fin réelle (fin réelle auto-alimentée à la complétion)
       html += '<div class="st-meta-row">';
       var stStartDateInput = st.Start_Date ? new Date(st.Start_Date * 1000).toISOString().split('T')[0] : '';
-      html += '<input type="date" class="subtask-edit-date" id="st-start-' + st.id + '" value="' + stStartDateInput + '" title="' + (currentLang === 'fr' ? 'Date début' : 'Start date') + '">';
-      html += '<input type="date" class="subtask-edit-date" id="st-due-' + st.id + '" value="' + stDueDateInput + '" title="' + (currentLang === 'fr' ? 'Échéance' : 'Due date') + '">';
-      html += '<input type="number" class="st-hours-input" id="st-hours-' + st.id + '" value="' + (st.Estimated_Hours || '') + '" placeholder="' + (currentLang === 'fr' ? 'Heures' : 'Hours') + '" min="0" step="0.5">';
+      html += '<div class="st-date-field"><span class="st-date-label">' + t('subtaskStartDate') + '</span><input type="date" class="subtask-edit-date" id="st-start-' + st.id + '" value="' + stStartDateInput + '"></div>';
+      html += '<div class="st-date-field"><span class="st-date-label">' + t('subtaskDueDate') + '</span><input type="date" class="subtask-edit-date" id="st-due-' + st.id + '" value="' + stDueDateInput + '"></div>';
+      var stCompletionDateInput = st.Completion_Date ? new Date(st.Completion_Date * 1000).toISOString().split('T')[0] : '';
+      html += '<div class="st-date-field"><span class="st-date-label">' + t('subtaskCompletionDate') + '</span><input type="date" class="subtask-edit-date" id="st-completion-' + st.id + '" value="' + stCompletionDateInput + '"></div>';
       html += '</div>';
       // Dépendance entre sous-tâches (bloquée par une autre sous-tâche de la tâche)
       var stOtherSubtasks = taskSubtasks.filter(function(s2) { return s2.id !== st.id; });
@@ -7432,6 +7454,7 @@ async function toggleSubtask(subtaskId, completed, el) {
   try {
     var newStatus = completed ? 'done' : 'todo';
     var fields = { Completed: completed, Status: newStatus };
+    if (completed && _tgSt && !_tgSt.Completed && !_tgSt.Completion_Date) fields.Completion_Date = todayDateEpoch();
     var clearedDoD = null;
     if (_tgSt && !completed && getDoD(_tgSt).length > 0) {
       clearedDoD = copyDoD(_tgSt).map(function(d) { d.done = false; return d; });
@@ -7444,6 +7467,7 @@ async function toggleSubtask(subtaskId, completed, el) {
       if (subtasks[i].id === subtaskId) {
         subtasks[i].Completed = completed;
         subtasks[i].Status = newStatus;
+        if (fields.Completion_Date !== undefined) subtasks[i].Completion_Date = fields.Completion_Date;
         if (clearedDoD) subtasks[i].DefinitionOfDone = clearedDoD;
         break;
       }
@@ -7526,6 +7550,7 @@ async function applyDoDUpdate(subtask, dodList, keepEditOpen) {
   if (allDone && !subtask.Completed) {
     fields.Completed = true;
     fields.Status = 'done';
+    if (!subtask.Completion_Date) fields.Completion_Date = todayDateEpoch();
     becameCompleted = true;
   } else if (!allDone && subtask.Completed) {
     fields.Completed = false;
@@ -7539,6 +7564,7 @@ async function applyDoDUpdate(subtask, dodList, keepEditOpen) {
     if (fields.Completed !== undefined) {
       subtask.Completed = fields.Completed;
       subtask.Status = fields.Status;
+      if (fields.Completion_Date !== undefined) subtask.Completion_Date = fields.Completion_Date;
     }
     if (becameCompleted) showToast(t('subtaskCompleted'), 'success');
     editAssignees = savedAssignees;
@@ -7819,7 +7845,7 @@ function cancelEditSubtask(subtaskId) {
 // après un re-render de la modale (ajout/modif/suppression d'un critère DoD).
 function snapshotSubtaskForm(subtaskId) {
   var snap = null;
-  ['st-title-','st-desc-','st-type-','st-tag-','st-priority-','st-start-','st-due-','st-hours-','st-assignee-'].forEach(function(pfx) {
+  ['st-title-','st-desc-','st-type-','st-tag-','st-priority-','st-start-','st-due-','st-completion-','st-assignee-'].forEach(function(pfx) {
     var el = document.getElementById(pfx + subtaskId);
     if (el) {
       if (!snap) snap = {};
@@ -7840,7 +7866,7 @@ function snapshotSubtaskForm(subtaskId) {
 function restoreSubtaskForm(subtaskId, snap) {
   if (snap) startEditSubtask(subtaskId);   // formulaire fermé avant l'opération : ne pas l'ouvrir
   if (!snap) return;
-  ['st-title-','st-desc-','st-tag-','st-assignee-','st-start-','st-due-','st-hours-'].forEach(function(pfx) {
+  ['st-title-','st-desc-','st-tag-','st-assignee-','st-start-','st-due-','st-completion-'].forEach(function(pfx) {
     var el = document.getElementById(pfx + subtaskId);
     if (el && snap[pfx] !== undefined) el.value = snap[pfx];
   });
@@ -7870,7 +7896,7 @@ async function saveEditSubtask(subtaskId, parentTaskId) {
   var contribHidden = document.getElementById('st-contributors-' + subtaskId);
   var startDateInput= document.getElementById('st-start-'    + subtaskId);
   var dueDateInput  = document.getElementById('st-due-'      + subtaskId);
-  var hoursInput    = document.getElementById('st-hours-'    + subtaskId);
+  var completionInput = document.getElementById('st-completion-' + subtaskId);
   if (!titleInput) return;
   var newTitle = titleInput.value.trim();
   if (!newTitle) return;
@@ -7895,11 +7921,11 @@ async function saveEditSubtask(subtaskId, parentTaskId) {
     Description: descInput ? descInput.value : '',
     Status: newStatus,
     Completed: newStatus === 'done',
+    Completion_Date: resolveSubtaskCompletion(_svSt, newStatus === 'done', completionInput ? completionInput.value : ''),
     Priority: prioritySel ? prioritySel.value : 'medium',
     Assignee: newAssignee,
     Contributors: newContributors,
     Tag: tagSel ? tagSel.value : '',
-    Estimated_Hours: hoursInput && hoursInput.value ? parseFloat(hoursInput.value) : null,
     Type: typeEl ? typeEl.value : 'subtask'
   };
   if (newStartDate) fields.Start_Date = newStartDate;
