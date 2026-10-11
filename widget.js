@@ -4451,6 +4451,35 @@ function sortTable(field) {
   else { tableSortField = field; tableSortAsc = true; }
   renderTableView();
 }
+// DoD dans la vue tableau : sous-tâches dont les critères sont dépliés
+var expandedTableSubtasks = {};
+
+// Une ligne DoD n'est visible que si sa sous-tâche est visible et dépliée.
+function applyTableDoDVisibility() {
+  document.querySelectorAll('.dod-row').forEach(function(row) {
+    var stId = row.getAttribute('data-st-parent');
+    var stRow = document.getElementById('table-st-row-' + stId);
+    var stVisible = !stRow || stRow.style.display !== 'none';
+    row.style.display = (stVisible && expandedTableSubtasks[stId]) ? 'table-row' : 'none';
+  });
+}
+
+function syncTableDoDButtons() {
+  document.querySelectorAll('.st-dod-toggle').forEach(function(btn) {
+    var on = !!expandedTableSubtasks[btn.getAttribute('data-st-id')];
+    btn.textContent = on ? '▼' : '▶';
+    btn.classList.toggle('expanded', on);
+  });
+}
+
+// Plier/déplier les DoD d'une sous-tâche dans la vue tableau
+function toggleTableDoD(subtaskId) {
+  if (expandedTableSubtasks[subtaskId]) delete expandedTableSubtasks[subtaskId];
+  else expandedTableSubtasks[subtaskId] = true;
+  applyTableDoDVisibility();
+  syncTableDoDButtons();
+}
+
 function renderTableView() {
   // B3 : mémoriser l'état avant reconstruction (sous-tâches dépliées + scroll)
   var _prevView = document.getElementById('table-view');
@@ -4559,24 +4588,16 @@ function renderTableView() {
     var _nowSec = Math.floor(Date.now() / 1000);
     for (var si = 0; si < taskSubtasks.length; si++) {
       var st = taskSubtasks[si];
-      html += '<tr class="subtask-row clickable-row" data-parent="' + task.id + '" style="display:none;cursor:pointer;" onclick="openEditTaskModal(' + task.id + ', true); setTimeout(function(){startEditSubtask(' + st.id + ')},100);">';
+      html += '<tr class="subtask-row clickable-row" id="table-st-row-' + st.id + '" data-parent="' + task.id + '" style="display:none;cursor:pointer;" onclick="openEditTaskModal(' + task.id + ', true); setTimeout(function(){startEditSubtask(' + st.id + ')},100);">';
       var stStatus = st.Status || (st.Completed ? 'done' : 'todo');
       var stDotClass = st.Priority === 'high' ? 'dot-high' : (st.Priority === 'medium' ? 'dot-medium' : 'dot-low');
       var stAssignee = st.Assignee ? st.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : '';
       var stOverdue = st.Due_Date && !st.Completed && st.Due_Date < _nowSec;
-      // DoD rattachés à la personne filtrée : critères affichés sous la sous-tâche
-      var stDodHtml = '';
-      if (currentFilterAssignee) {
-        var stDodIdSet = personIdentSet(currentFilterAssignee);
-        getDoD(st).forEach(function(d) {
-          if (d.assignee && assigneeListHas(d.assignee, stDodIdSet)) {
-            stDodHtml += '<div class="st-dod-filter"><span class="st-dod-check' + (d.done ? ' done' : '') + '">' + (d.done ? '✓' : '○') + '</span>' + sanitize(d.text || '') + '</div>';
-          }
-        });
-      }
+      // DoD de la sous-tâche : lignes dépliables au niveau en dessous (vue tableau)
+      var stDodList = getDoD(st);
       // Colonne Tâche (titre)
       var stMilestoneMark = (st.Type === 'milestone') ? '<span title="Jalon" style="color:#7c3aed;margin-right:3px;">◆</span>' : '';
-      html += '<td><div class="subtask-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="subtask-checkbox" ' + (st.Completed ? 'checked' : '') + ' onclick="event.stopPropagation();toggleSubtask(' + st.id + ', ' + !st.Completed + ', this)" style="cursor:pointer;width:14px;height:14px;margin-right:6px;flex-shrink:0;" />' + stMilestoneMark + '<span class="subtask-name' + (st.Completed ? ' completed' : '') + '">' + sanitize(st.Title) + '</span></div>' + stDodHtml + '</td>';
+      html += '<td><div class="subtask-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="subtask-checkbox" ' + (st.Completed ? 'checked' : '') + ' onclick="event.stopPropagation();toggleSubtask(' + st.id + ', ' + !st.Completed + ', this)" style="cursor:pointer;width:14px;height:14px;margin-right:6px;flex-shrink:0;" />' + stMilestoneMark + '<span class="subtask-name' + (st.Completed ? ' completed' : '') + '">' + sanitize(st.Title) + '</span></div>' + (stDodList.length > 0 ? '<button class="toggle-btn st-dod-toggle" data-st-id="' + st.id + '" id="st-dod-toggle-' + st.id + '" onclick="event.stopPropagation(); toggleTableDoD(' + st.id + ')" title="DoD">▶</button>' : '') + '</div></td>';
       // Projet (vide : hérité du parent)
       html += '<td></td>';
       // Statut (couleur réelle du statut personnalisé)
@@ -4600,6 +4621,17 @@ function renderTableView() {
       // Actions
       html += '<td></td>';
       html += '</tr>';
+      // DoD : lignes au niveau en dessous de la sous-tâche, pliables/dépliables
+      for (var sdi = 0; sdi < stDodList.length; sdi++) {
+        var sd = stDodList[sdi];
+        html += '<tr class="dod-row" data-parent="' + task.id + '" data-st-parent="' + st.id + '" style="display:none;">';
+        html += '<td><div class="dod-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="dod-checkbox" ' + (sd.done ? 'checked' : '') + ' onchange="toggleDoD(' + st.id + ', ' + sdi + ', this.checked)" style="cursor:pointer;width:14px;height:14px;flex-shrink:0;" />';
+        html += '<span class="dod-text' + (sd.done ? ' dod-text-done' : '') + '">' + sanitize(sd.text || '') + '</span>';
+        if (sd.assignee) html += '<span class="subtask-assignee-badge">👤 ' + sanitize(sd.assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ')) + '</span>';
+        html += '</div></td>';
+        html += '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+        html += '</tr>';
+      }
     }
   }
 
@@ -4618,6 +4650,8 @@ function renderTableView() {
     if (btn) { btn.textContent = '▼'; btn.classList.add('expanded'); }
   });
   if (_scrollEl && _scrollTop) _scrollEl.scrollTop = _scrollTop;
+  applyTableDoDVisibility();
+  syncTableDoDButtons();
 }
 
 function toggleSubtasks(taskId) {
@@ -4632,6 +4666,7 @@ function toggleSubtasks(taskId) {
     btn.textContent = isExpanded ? '▶' : '▼';
     btn.classList.toggle('expanded', !isExpanded);
   }
+  applyTableDoDVisibility();
 }
 
 function expandAllSubtasks() {
@@ -4639,6 +4674,7 @@ function expandAllSubtasks() {
   var btns = document.querySelectorAll('.toggle-btn');
   for (var i = 0; i < rows.length; i++) rows[i].style.display = 'table-row';
   for (var i = 0; i < btns.length; i++) { btns[i].textContent = '▼'; btns[i].classList.add('expanded'); }
+  applyTableDoDVisibility();
 }
 
 function collapseAllSubtasks() {
@@ -4646,6 +4682,7 @@ function collapseAllSubtasks() {
   var btns = document.querySelectorAll('.toggle-btn');
   for (var i = 0; i < rows.length; i++) rows[i].style.display = 'none';
   for (var i = 0; i < btns.length; i++) { btns[i].textContent = '▶'; btns[i].classList.remove('expanded'); }
+  applyTableDoDVisibility();
 }
 
 async function toggleSubtaskFromTable(subtaskId, completed) {
@@ -4687,6 +4724,7 @@ async function toggleSubtaskFromTable(subtaskId, completed) {
         btn.classList.add('expanded');
       }
     });
+    applyTableDoDVisibility();
     
     // If modal is open, refresh it too
     var modal = document.getElementById('edit-task-modal');
@@ -7589,9 +7627,13 @@ async function applyDoDUpdate(subtask, dodList, keepEditOpen) {
     editAccountable = savedAccountable;
     editConsulted = savedConsulted;
     editInformed = savedInformed;
-    openEditTaskModal(subtask.Parent_Task_Id, true);
-    if (stFormState) restoreSubtaskForm(subtask.id, stFormState);
-    restoreModalScrollTop(scrollPos);
+    if (document.getElementById('task-title')) {
+      openEditTaskModal(subtask.Parent_Task_Id, true);
+      if (stFormState) restoreSubtaskForm(subtask.id, stFormState);
+      restoreModalScrollTop(scrollPos);
+    } else if (typeof renderTableView === 'function') {
+      renderTableView();   // hors modale (vue tableau) : rafraîchir sans ouvrir la modale
+    }
   } catch (e) {
     console.error('Error updating DoD:', e);
     showToast('Error: ' + e.message, 'error');
