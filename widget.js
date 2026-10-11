@@ -7866,7 +7866,11 @@ function snapshotSubtaskForm(subtaskId) {
 function restoreSubtaskForm(subtaskId, snap) {
   if (snap) startEditSubtask(subtaskId);   // formulaire fermé avant l'opération : ne pas l'ouvrir
   if (!snap) return;
-  ['st-title-','st-desc-','st-tag-','st-assignee-','st-start-','st-due-','st-completion-'].forEach(function(pfx) {
+  // Fin réelle : ne restaurer la valeur figée que si une saisie était en cours ;
+  // à vide, la valeur fraîche (auto-alimentée à la complétion DoD) reste affichée.
+  var stCompletionEl = document.getElementById('st-completion-' + subtaskId);
+  if (stCompletionEl && snap['st-completion-']) stCompletionEl.value = snap['st-completion-'];
+  ['st-title-','st-desc-','st-tag-','st-assignee-','st-start-','st-due-'].forEach(function(pfx) {
     var el = document.getElementById(pfx + subtaskId);
     if (el && snap[pfx] !== undefined) el.value = snap[pfx];
   });
