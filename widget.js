@@ -74,6 +74,7 @@ var i18n = {
     fieldGroup: 'Groupe',
     fieldStartDate: 'Date de début',
     fieldDueDate: 'Échéance',
+    fieldCompletionDate: 'Date de fin réelle',
     fieldCategory: 'Produit',
     fieldEstimatedTime: 'Temps estimé (h)',
     priorityHigh: 'Haute',
@@ -235,7 +236,9 @@ var i18n = {
     dodCriterionDeleted: 'Critère DoD supprimé',
     dodCriterionUpdated: 'Critère DoD mis à jour',
     dodIncomplete: 'DoD incomplet : cochez tous les critères pour terminer la sous-tâche',
+    subtaskStartDate: 'Début',
     subtaskDueDate: 'Échéance',
+    subtaskCompletionDate: 'Fin réelle',
     noAssignee: 'Non assigné',
     dependencies: 'Dépendances',
     blockedBy: 'Bloqué par',
@@ -425,6 +428,7 @@ var i18n = {
     fieldGroup: 'Group',
     fieldStartDate: 'Start date',
     fieldDueDate: 'Due date',
+    fieldCompletionDate: 'Actual end date',
     fieldCategory: 'Product',
     fieldEstimatedTime: 'Estimated time (h)',
     priorityHigh: 'High',
@@ -586,7 +590,9 @@ var i18n = {
     dodCriterionDeleted: 'DoD criterion deleted',
     dodCriterionUpdated: 'DoD criterion updated',
     dodIncomplete: 'Incomplete DoD: check all criteria to complete the subtask',
+    subtaskStartDate: 'Start',
     subtaskDueDate: 'Due date',
+    subtaskCompletionDate: 'Actual end',
     noAssignee: 'Unassigned',
     dependencies: 'Dependencies',
     blockedBy: 'Blocked by',
@@ -928,6 +934,7 @@ var columnMapping = {
     group: 'Group_Name',
     startDate: 'Start_Date',
     dueDate: 'Due_Date',
+    completionDate: 'Completion_Date',
     category: 'Category',
     tag: 'Tag',
     recurrence: 'Recurrence',
@@ -966,6 +973,43 @@ var currentUserEmail = '';
 // =============================================================================
 // UTILS
 // =============================================================================
+
+// Date de fin réelle : epoch de la date du jour, au même format que les saisies
+// de date du widget (minuit UTC), directement compatible colonne Date Grist.
+function todayDateEpoch() {
+  var n = new Date();
+  return toEpoch(n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0'));
+}
+
+// Date de fin réelle à enregistrer : la valeur saisie dans la modale prime
+// (champ vidé = suppression demandée) ; sinon date du jour uniquement au
+// passage à "done" d'une tâche qui ne l'était pas déjà.
+function resolveCompletionDate(task, statusValue, formValue) {
+  if (formValue) return toEpoch(formValue);
+  if (statusValue === 'done' && (!task || task.Status !== 'done')) return todayDateEpoch();
+  return null;
+}
+
+// Champs écrits lors d'un changement de statut hors modale (action rapide,
+// drag & drop kanban) : alimente automatiquement la date de fin réelle au
+// passage à "done", sans jamais écraser une valeur saisie manuellement.
+function buildStatusUpdateFields(task, newStatus) {
+  var fields = { Status: newStatus };
+  if (newStatus === 'done' && task && task.Status !== 'done' && !task.Completion_Date) {
+    fields[getColumnName('tasks', 'completionDate')] = todayDateEpoch();
+  }
+  return fields;
+}
+
+// Fin réelle d'une sous-tâche : la valeur saisie dans le formulaire prime ;
+// sinon date du jour au passage à terminée ; champ vidé reste vidé
+// (suppression manuelle respectée).
+function resolveSubtaskCompletion(subtask, willBeDone, formValue) {
+  if (formValue) return toEpoch(formValue);
+  var wasDone = subtask && (subtask.Completed || subtask.Status === 'done');
+  if (willBeDone && !wasDone) return todayDateEpoch();
+  return null;
+}
 
 function isInsideGrist() {
   try { return window.frameElement !== null || window !== window.parent; }
@@ -1147,13 +1191,20 @@ function getTaskSubtasks(taskId) {
 }
 
 // Sous-tâches rattachées à une tâche dans les vues : uniquement celles
-// assignées à la personne filtrée quand le filtre Personne est actif
+// assignées à la personne filtrée, ou portant un DoD qui lui est rattaché,
 // (la tâche parente reste visible, avec zéro sous-tâche le cas échéant).
+// Un critère DoD de la sous-tâche est-il rattaché à la personne (filtre Personne) ?
+function subtaskHasPersonDoD(subtask, identSet) {
+  return getDoD(subtask).some(function(d) {
+    return d.assignee && assigneeListHas(d.assignee, identSet);
+  });
+}
+
 function getVisibleTaskSubtasks(taskId) {
   var list = getTaskSubtasks(taskId);
   if (currentFilterAssignee) {
     var identSet = personIdentSet(currentFilterAssignee);
-    list = list.filter(function(st) { return assigneeListHas(st.Assignee, identSet); });
+    list = list.filter(function(st) { return assigneeListHas(st.Assignee, identSet) || subtaskHasPersonDoD(st, identSet); });
   }
   if (currentFilterTag) {
     var tagKey = String(currentFilterTag).trim();
@@ -1878,6 +1929,7 @@ async function ensureTables() {
           { id: 'Group_Name', type: 'Text' },
           { id: 'Start_Date', type: 'Date' },
           { id: 'Due_Date', type: 'Date' },
+          { id: 'Completion_Date', type: 'Date' },
           { id: 'Category', type: 'Text' },
           { id: 'Tag', type: 'Text' },
           { id: 'Recurrence', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['none', 'daily', 'weekly', 'monthly'] }) },
@@ -1936,6 +1988,7 @@ async function ensureTables() {
           { id: 'Contributors', type: 'Text' },
           { id: 'Tag', type: 'Text' },
           { id: 'Due_Date', type: 'Date' },
+          { id: 'Completion_Date', type: 'Date' },
           { id: 'Estimated_Hours', type: 'Numeric' },
           { id: 'Completed', type: 'Bool' },
           { id: 'Order', type: 'Int' },
@@ -2134,6 +2187,7 @@ async function ensureTables() {
         ['task_group', TASKS_TABLE, 'Group_Name', 'Groupe', false, 'Group_Name'],
         ['task_start_date', TASKS_TABLE, 'Start_Date', 'Date début', false, 'Start_Date'],
         ['task_due_date', TASKS_TABLE, 'Due_Date', 'Échéance', false, 'Due_Date'],
+        ['task_completion_date', TASKS_TABLE, 'Completion_Date', 'Date de fin réelle', false, 'Completion_Date'],
         ['task_category', TASKS_TABLE, 'Category', 'Produit', false, 'Category'],
         ['task_tag', TASKS_TABLE, 'Tag', 'Tag', false, 'Tag'],
         ['task_recurrence', TASKS_TABLE, 'Recurrence', 'Récurrence', false, 'Recurrence'],
@@ -2252,6 +2306,9 @@ async function ensureTables() {
         if (existingCols.indexOf('Auto_Extend') === -1) {
           await grist.docApi.applyUserActions([['AddColumn', TASKS_TABLE, 'Auto_Extend', { type: 'Bool' }]]);
         }
+        if (existingCols.indexOf('Completion_Date') === -1) {
+          await grist.docApi.applyUserActions([['AddColumn', TASKS_TABLE, 'Completion_Date', { type: 'Date' }]]);
+        }
       } catch (migrationErr) {
         console.log('Migration check completed or columns already exist');
       }
@@ -2277,6 +2334,9 @@ async function ensureTables() {
         }
         if (stCols.indexOf('Due_Date') === -1) {
           stActions.push(['AddColumn', SUBTASKS_TABLE, 'Due_Date', { type: 'Date' }]);
+        }
+        if (stCols.indexOf('Completion_Date') === -1) {
+          stActions.push(['AddColumn', SUBTASKS_TABLE, 'Completion_Date', { type: 'Date' }]);
         }
         if (stCols.indexOf('Description') === -1) {
           stActions.push(['AddColumn', SUBTASKS_TABLE, 'Description', { type: 'Text' }]);
@@ -2364,6 +2424,7 @@ async function loadAllData() {
         var groupCol = getColumnName('tasks', 'group');
         var startDateCol = getColumnName('tasks', 'startDate');
         var dueDateCol = getColumnName('tasks', 'dueDate');
+        var completionDateCol = getColumnName('tasks', 'completionDate');
         var categoryCol = getColumnName('tasks', 'category');
         var tagCol = getColumnName('tasks', 'tag');
         var recurrenceCol = getColumnName('tasks', 'recurrence');
@@ -2379,6 +2440,7 @@ async function loadAllData() {
         task.Group_Name = taskData[groupCol] ? taskData[groupCol][i] : '';
         task.Start_Date = taskData[startDateCol] ? taskData[startDateCol][i] : null;
         task.Due_Date = taskData[dueDateCol] ? taskData[dueDateCol][i] : null;
+        task.Completion_Date = taskData[completionDateCol] ? taskData[completionDateCol][i] : null;
         task.Category = taskData[categoryCol] ? taskData[categoryCol][i] : '';
         task.Tag = taskData[tagCol] ? taskData[tagCol][i] : '';
         task.Recurrence = taskData[recurrenceCol] ? taskData[recurrenceCol][i] : 'none';
@@ -2493,6 +2555,7 @@ async function loadAllData() {
           Contributors: subtaskData.Contributors ? subtaskData.Contributors[i] : '',
           Tag: subtaskData.Tag ? subtaskData.Tag[i] : '',
           Due_Date: subtaskData.Due_Date ? subtaskData.Due_Date[i] : null,
+          Completion_Date: subtaskData.Completion_Date ? subtaskData.Completion_Date[i] : null,
           Start_Date: subtaskData.Start_Date ? subtaskData.Start_Date[i] : null,
           Estimated_Hours: subtaskData.Estimated_Hours ? subtaskData.Estimated_Hours[i] : null,
           Recurrence: subtaskData.Recurrence ? subtaskData.Recurrence[i] : 'none',
@@ -3310,7 +3373,8 @@ function getFilteredTasks() {
     result = result.filter(function(t) {
       if (assigneeListHas(t.Assignee, identSet)) return true;
       // La tâche parente reste visible si une de ses sous-tâches est assignée à la personne
-      return getTaskSubtasks(t.id).some(function(st) { return assigneeListHas(st.Assignee, identSet); });
+      // ou porte un critère DoD rattaché à la personne
+      return getTaskSubtasks(t.id).some(function(st) { return assigneeListHas(st.Assignee, identSet) || subtaskHasPersonDoD(st, identSet); });
     });
   }
   if (currentFilterCategory) {
@@ -3967,6 +4031,7 @@ async function toggleSubtaskFromCard(subtaskId, completed, el) {
   }
   try {
     var fields = { Completed: completed };
+    if (completed && subtask && !subtask.Completed && !subtask.Completion_Date) fields.Completion_Date = todayDateEpoch();
     var clearedDoD = null;
     if (subtask && !completed && getDoD(subtask).length > 0) {
       clearedDoD = copyDoD(subtask).map(function(d) { d.done = false; return d; });
@@ -3976,7 +4041,7 @@ async function toggleSubtaskFromCard(subtaskId, completed, el) {
       ['UpdateRecord', SUBTASKS_TABLE, subtaskId, fields]
     ]);
     for (var i = 0; i < subtasks.length; i++) {
-      if (subtasks[i].id === subtaskId) { subtasks[i].Completed = completed; if (clearedDoD) subtasks[i].DefinitionOfDone = clearedDoD; break; }
+      if (subtasks[i].id === subtaskId) { subtasks[i].Completed = completed; if (fields.Completion_Date !== undefined) subtasks[i].Completion_Date = fields.Completion_Date; if (clearedDoD) subtasks[i].DefinitionOfDone = clearedDoD; break; }
     }
     renderKanbanView();
   } catch (e) {
@@ -4350,6 +4415,10 @@ async function onDrop(e) {
         record[field] = newValue ? parseInt(newValue) : null;
       } else {
         record[field] = newValue;
+        if (field === 'Status') {
+          Object.assign(record, buildStatusUpdateFields(draggedTask, newValue));
+          if (record[getColumnName('tasks', 'completionDate')] !== undefined) draggedTask.Completion_Date = record[getColumnName('tasks', 'completionDate')];
+        }
       }
       await grist.docApi.applyUserActions([['UpdateRecord', TASKS_TABLE, draggedTaskId, record]]);
       for (var i = 0; i < tasks.length; i++) {
@@ -4387,6 +4456,35 @@ function sortTable(field) {
   else { tableSortField = field; tableSortAsc = true; }
   renderTableView();
 }
+// DoD dans la vue tableau : sous-tâches dont les critères sont dépliés
+var expandedTableSubtasks = {};
+
+// Une ligne DoD n'est visible que si sa sous-tâche est visible et dépliée.
+function applyTableDoDVisibility() {
+  document.querySelectorAll('.dod-row').forEach(function(row) {
+    var stId = row.getAttribute('data-st-parent');
+    var stRow = document.getElementById('table-st-row-' + stId);
+    var stVisible = !stRow || stRow.style.display !== 'none';
+    row.style.display = (stVisible && expandedTableSubtasks[stId]) ? 'table-row' : 'none';
+  });
+}
+
+function syncTableDoDButtons() {
+  document.querySelectorAll('.st-dod-toggle').forEach(function(btn) {
+    var on = !!expandedTableSubtasks[btn.getAttribute('data-st-id')];
+    btn.textContent = on ? '▼' : '▶';
+    btn.classList.toggle('expanded', on);
+  });
+}
+
+// Plier/déplier les DoD d'une sous-tâche dans la vue tableau
+function toggleTableDoD(subtaskId) {
+  if (expandedTableSubtasks[subtaskId]) delete expandedTableSubtasks[subtaskId];
+  else expandedTableSubtasks[subtaskId] = true;
+  applyTableDoDVisibility();
+  syncTableDoDButtons();
+}
+
 function renderTableView() {
   // B3 : mémoriser l'état avant reconstruction (sous-tâches dépliées + scroll)
   var _prevView = document.getElementById('table-view');
@@ -4495,14 +4593,23 @@ function renderTableView() {
     var _nowSec = Math.floor(Date.now() / 1000);
     for (var si = 0; si < taskSubtasks.length; si++) {
       var st = taskSubtasks[si];
-      html += '<tr class="subtask-row clickable-row" data-parent="' + task.id + '" style="display:none;cursor:pointer;" onclick="openEditTaskModal(' + task.id + ', true); setTimeout(function(){startEditSubtask(' + st.id + ')},100);">';
+      html += '<tr class="subtask-row clickable-row" id="table-st-row-' + st.id + '" data-parent="' + task.id + '" style="display:none;cursor:pointer;" onclick="openEditTaskModal(' + task.id + ', true); setTimeout(function(){startEditSubtask(' + st.id + ')},100);">';
       var stStatus = st.Status || (st.Completed ? 'done' : 'todo');
       var stDotClass = st.Priority === 'high' ? 'dot-high' : (st.Priority === 'medium' ? 'dot-medium' : 'dot-low');
       var stAssignee = st.Assignee ? st.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : '';
       var stOverdue = st.Due_Date && !st.Completed && st.Due_Date < _nowSec;
+      // DoD de la sous-tâche : lignes dépliables au niveau en dessous (vue tableau)
+      var stDodList = getDoD(st);
+      // Filtre personne : ne montrer que les critères rattachés à la personne,
+      // en conservant l'index d'origine (les cases pointent sur la liste complète).
+      var stDodShown = stDodList.map(function(d, di) { return { d: d, di: di }; });
+      if (currentFilterAssignee) {
+        var stDodIdSet = personIdentSet(currentFilterAssignee);
+        stDodShown = stDodShown.filter(function(x) { return x.d.assignee && assigneeListHas(x.d.assignee, stDodIdSet); });
+      }
       // Colonne Tâche (titre)
       var stMilestoneMark = (st.Type === 'milestone') ? '<span title="Jalon" style="color:#7c3aed;margin-right:3px;">◆</span>' : '';
-      html += '<td><div class="subtask-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="subtask-checkbox" ' + (st.Completed ? 'checked' : '') + ' onclick="event.stopPropagation();toggleSubtask(' + st.id + ', ' + !st.Completed + ', this)" style="cursor:pointer;width:14px;height:14px;margin-right:6px;flex-shrink:0;" />' + stMilestoneMark + '<span class="subtask-name' + (st.Completed ? ' completed' : '') + '">' + sanitize(st.Title) + '</span></div></td>';
+      html += '<td><div class="subtask-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="subtask-checkbox" ' + (st.Completed ? 'checked' : '') + ' onclick="event.stopPropagation();toggleSubtask(' + st.id + ', ' + !st.Completed + ', this)" style="cursor:pointer;width:14px;height:14px;margin-right:6px;flex-shrink:0;" />' + stMilestoneMark + '<span class="subtask-name' + (st.Completed ? ' completed' : '') + '">' + sanitize(st.Title) + '</span></div>' + (stDodShown.length > 0 ? '<button class="toggle-btn st-dod-toggle" data-st-id="' + st.id + '" id="st-dod-toggle-' + st.id + '" onclick="event.stopPropagation(); toggleTableDoD(' + st.id + ')" title="DoD">▶</button>' : '') + '</div></td>';
       // Projet (vide : hérité du parent)
       html += '<td></td>';
       // Statut (couleur réelle du statut personnalisé)
@@ -4526,6 +4633,16 @@ function renderTableView() {
       // Actions
       html += '<td></td>';
       html += '</tr>';
+      // DoD : lignes au niveau en dessous de la sous-tâche, pliables/dépliables
+      for (var sdi = 0; sdi < stDodShown.length; sdi++) {
+        var sd = stDodShown[sdi].d;
+        html += '<tr class="dod-row" data-parent="' + task.id + '" data-st-parent="' + st.id + '" style="display:none;">';
+        html += '<td><div class="dod-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="dod-checkbox" ' + (sd.done ? 'checked' : '') + ' onchange="toggleDoD(' + st.id + ', ' + stDodShown[sdi].di + ', this.checked)" style="cursor:pointer;width:14px;height:14px;flex-shrink:0;" />';
+        html += '<span class="dod-text' + (sd.done ? ' dod-text-done' : '') + '">' + sanitize(sd.text || '') + '</span>';
+        html += '</div></td>';
+        html += '<td></td><td></td><td></td><td></td><td>' + (sd.assignee ? '<span class="assignee-chip">👤 ' + sanitize(sd.assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ')) + '</span>' : '') + '</td><td></td><td></td><td></td>';
+        html += '</tr>';
+      }
     }
   }
 
@@ -4544,6 +4661,8 @@ function renderTableView() {
     if (btn) { btn.textContent = '▼'; btn.classList.add('expanded'); }
   });
   if (_scrollEl && _scrollTop) _scrollEl.scrollTop = _scrollTop;
+  applyTableDoDVisibility();
+  syncTableDoDButtons();
 }
 
 function toggleSubtasks(taskId) {
@@ -4558,6 +4677,7 @@ function toggleSubtasks(taskId) {
     btn.textContent = isExpanded ? '▶' : '▼';
     btn.classList.toggle('expanded', !isExpanded);
   }
+  applyTableDoDVisibility();
 }
 
 function expandAllSubtasks() {
@@ -4565,6 +4685,7 @@ function expandAllSubtasks() {
   var btns = document.querySelectorAll('.toggle-btn');
   for (var i = 0; i < rows.length; i++) rows[i].style.display = 'table-row';
   for (var i = 0; i < btns.length; i++) { btns[i].textContent = '▼'; btns[i].classList.add('expanded'); }
+  applyTableDoDVisibility();
 }
 
 function collapseAllSubtasks() {
@@ -4572,6 +4693,7 @@ function collapseAllSubtasks() {
   var btns = document.querySelectorAll('.toggle-btn');
   for (var i = 0; i < rows.length; i++) rows[i].style.display = 'none';
   for (var i = 0; i < btns.length; i++) { btns[i].textContent = '▶'; btns[i].classList.remove('expanded'); }
+  applyTableDoDVisibility();
 }
 
 async function toggleSubtaskFromTable(subtaskId, completed) {
@@ -4588,11 +4710,12 @@ async function toggleSubtaskFromTable(subtaskId, completed) {
   
   try {
     await grist.docApi.applyUserActions([
-      ['UpdateRecord', SUBTASKS_TABLE, subtaskId, { Completed: completed }]
+      ['UpdateRecord', SUBTASKS_TABLE, subtaskId, Object.assign({ Completed: completed }, (completed && subtask && !subtask.Completed && !subtask.Completion_Date) ? { Completion_Date: todayDateEpoch() } : {})]
     ]);
     // Update local state
     for (var i = 0; i < subtasks.length; i++) {
       if (subtasks[i].id === subtaskId) {
+        if (completed && subtask && !subtask.Completed && !subtask.Completion_Date) subtasks[i].Completion_Date = todayDateEpoch();
         subtasks[i].Completed = completed;
         break;
       }
@@ -4612,6 +4735,7 @@ async function toggleSubtaskFromTable(subtaskId, completed) {
         btn.classList.add('expanded');
       }
     });
+    applyTableDoDVisibility();
     
     // If modal is open, refresh it too
     var modal = document.getElementById('edit-task-modal');
@@ -6488,6 +6612,7 @@ function openEditTaskModal(taskId, preserveAssignees) {
 
   var startVal = task.Start_Date ? new Date(task.Start_Date * 1000).toISOString().split('T')[0] : '';
   var dueVal = task.Due_Date ? new Date(task.Due_Date * 1000).toISOString().split('T')[0] : '';
+  var completionVal = task.Completion_Date ? new Date(task.Completion_Date * 1000).toISOString().split('T')[0] : '';
 
   // Progress calculation based on subtasks
   var progressPct = getTaskProgress(task);
@@ -6572,6 +6697,12 @@ function openEditTaskModal(taskId, preserveAssignees) {
   html += '<span class="detail-field-icon">⏰</span>';
   html += '<span class="detail-field-label">' + t('fieldDueDate') + '</span>';
   html += '<div class="detail-field-value"><input type="date" id="task-due" value="' + dueVal + '" /></div>';
+  html += '</div>';
+
+  html += '<div class="detail-field">';
+  html += '<span class="detail-field-icon">🏁</span>';
+  html += '<span class="detail-field-label">' + t('fieldCompletionDate') + '</span>';
+  html += '<div class="detail-field-value"><input type="date" id="task-completion-date" value="' + completionVal + '" /></div>';
   html += '</div>';
 
   // Priority
@@ -6678,7 +6809,7 @@ function openEditTaskModal(taskId, preserveAssignees) {
         });
       }
       if (stDueDateStr) html += '<span class="subtask-due-badge' + stDueClass + '">📅 ' + stDueDateStr + '</span>';
-      if (st.Estimated_Hours) html += '<span class="subtask-assignee-badge">⏱ ' + st.Estimated_Hours + 'h</span>';
+      if (st.Completion_Date) html += '<span class="subtask-due-badge">🏁 ' + new Date(st.Completion_Date * 1000).toLocaleDateString(currentLang === 'fr' ? 'fr-FR' : 'en-US', { day: '2-digit', month: '2-digit', year: 'numeric' }) + '</span>';
       html += '</span>';
       html += '<button class="subtask-edit-btn" onclick="startEditSubtask(' + st.id + ', ' + task.id + ')" title="' + t('editSubtask') + '">✏️</button>';
       html += '<button class="subtask-delete" onclick="deleteSubtask(' + st.id + ', ' + task.id + ')" title="' + t('delete') + '">✕</button>';
@@ -6752,16 +6883,17 @@ function openEditTaskModal(taskId, preserveAssignees) {
       html += '</div>';
       // Contributeurs (sélection multiple, liste déroulante à cases à cocher)
       stContributorsState[st.id] = (st.Contributors || '').split(',').map(function(a) { return a.trim(); }).filter(Boolean);
-      html += '<div class="st-span2">';
+      html += '<div class="st-contrib-cell">';
       html += '<div class="st-pill-label">🤝 ' + t('subtaskContributors') + '</div>';
       html += '<div class="filter-combo st-contrib-combo" id="st-contrib-combo-' + st.id + '"></div>';
       html += '</div>';
-      // Date + hours row
+      // Dates : Début / Échéance / Fin réelle (fin réelle auto-alimentée à la complétion)
       html += '<div class="st-meta-row">';
       var stStartDateInput = st.Start_Date ? new Date(st.Start_Date * 1000).toISOString().split('T')[0] : '';
-      html += '<input type="date" class="subtask-edit-date" id="st-start-' + st.id + '" value="' + stStartDateInput + '" title="' + (currentLang === 'fr' ? 'Date début' : 'Start date') + '">';
-      html += '<input type="date" class="subtask-edit-date" id="st-due-' + st.id + '" value="' + stDueDateInput + '" title="' + (currentLang === 'fr' ? 'Échéance' : 'Due date') + '">';
-      html += '<input type="number" class="st-hours-input" id="st-hours-' + st.id + '" value="' + (st.Estimated_Hours || '') + '" placeholder="' + (currentLang === 'fr' ? 'Heures' : 'Hours') + '" min="0" step="0.5">';
+      html += '<div class="st-date-field"><span class="st-date-label">' + t('subtaskStartDate') + '</span><input type="date" class="subtask-edit-date" id="st-start-' + st.id + '" value="' + stStartDateInput + '"></div>';
+      html += '<div class="st-date-field"><span class="st-date-label">' + t('subtaskDueDate') + '</span><input type="date" class="subtask-edit-date" id="st-due-' + st.id + '" value="' + stDueDateInput + '"></div>';
+      var stCompletionDateInput = st.Completion_Date ? new Date(st.Completion_Date * 1000).toISOString().split('T')[0] : '';
+      html += '<div class="st-date-field"><span class="st-date-label">' + t('subtaskCompletionDate') + '</span><input type="date" class="subtask-edit-date" id="st-completion-' + st.id + '" value="' + stCompletionDateInput + '"></div>';
       html += '</div>';
       // Dépendance entre sous-tâches (bloquée par une autre sous-tâche de la tâche)
       var stOtherSubtasks = taskSubtasks.filter(function(s2) { return s2.id !== st.id; });
@@ -6842,6 +6974,7 @@ function openEditTaskModal(taskId, preserveAssignees) {
   html += '<div class="progress-bar-bg"><div class="progress-bar-fill ' + barClass + '" style="width:' + progressPct + '%"></div></div>';
   html += '<div class="detail-info-row"><span class="info-label">' + t('startLabel') + '</span><span class="info-value">' + (startVal ? formatDate(task.Start_Date) : '--') + '</span></div>';
   html += '<div class="detail-info-row"><span class="info-label">' + t('dueLabel') + '</span><span class="info-value" style="' + (isOverdue(task) ? 'color:#dc2626;' : '') + '">' + (dueVal ? formatDate(task.Due_Date) : '--') + (isOverdue(task) ? ' ⚠️' : '') + '</span></div>';
+  html += '<div class="detail-info-row"><span class="info-label">' + t('fieldCompletionDate') + ' :</span><span class="info-value">' + (task.Completion_Date ? formatDate(task.Completion_Date) : '--') + '</span></div>';
   html += '</div>';
 
   // Quick actions card
@@ -7260,7 +7393,7 @@ async function quickAction(taskId, newStatus) {
 
   try {
     await grist.docApi.applyUserActions([
-      ['UpdateRecord', TASKS_TABLE, taskId, { Status: newStatus }]
+      ['UpdateRecord', TASKS_TABLE, taskId, buildStatusUpdateFields(task, newStatus)]
     ]);
     for (var i = 0; i < tasks.length; i++) {
       if (tasks[i].id === taskId) { tasks[i].Status = newStatus; break; }
@@ -7308,6 +7441,8 @@ async function persistTaskFormFields(taskId) {
   if ((el = document.getElementById('task-group'))) setField(record, 'tasks', 'group', el.value);
   if ((el = document.getElementById('task-start'))) setField(record, 'tasks', 'startDate', toEpoch(el.value));
   if ((el = document.getElementById('task-due'))) setField(record, 'tasks', 'dueDate', toEpoch(el.value));
+  var pTask = tasks.find(function(t) { return t.id === taskId; });
+  if ((el = document.getElementById('task-completion-date'))) setField(record, 'tasks', 'completionDate', resolveCompletionDate(pTask, (document.getElementById('task-status') || {}).value, el.value));
   if ((el = document.getElementById('task-category'))) setField(record, 'tasks', 'category', el.value.trim());
   if ((el = document.getElementById('task-project'))) setField(record, 'tasks', 'projectId', el.value ? parseInt(el.value) : 0);
   if ((el = document.getElementById('task-recurrence'))) setField(record, 'tasks', 'recurrence', el.value);
@@ -7386,6 +7521,7 @@ async function toggleSubtask(subtaskId, completed, el) {
   try {
     var newStatus = completed ? 'done' : 'todo';
     var fields = { Completed: completed, Status: newStatus };
+    if (completed && _tgSt && !_tgSt.Completed && !_tgSt.Completion_Date) fields.Completion_Date = todayDateEpoch();
     var clearedDoD = null;
     if (_tgSt && !completed && getDoD(_tgSt).length > 0) {
       clearedDoD = copyDoD(_tgSt).map(function(d) { d.done = false; return d; });
@@ -7398,6 +7534,7 @@ async function toggleSubtask(subtaskId, completed, el) {
       if (subtasks[i].id === subtaskId) {
         subtasks[i].Completed = completed;
         subtasks[i].Status = newStatus;
+        if (fields.Completion_Date !== undefined) subtasks[i].Completion_Date = fields.Completion_Date;
         if (clearedDoD) subtasks[i].DefinitionOfDone = clearedDoD;
         break;
       }
@@ -7480,6 +7617,7 @@ async function applyDoDUpdate(subtask, dodList, keepEditOpen) {
   if (allDone && !subtask.Completed) {
     fields.Completed = true;
     fields.Status = 'done';
+    if (!subtask.Completion_Date) fields.Completion_Date = todayDateEpoch();
     becameCompleted = true;
   } else if (!allDone && subtask.Completed) {
     fields.Completed = false;
@@ -7493,15 +7631,20 @@ async function applyDoDUpdate(subtask, dodList, keepEditOpen) {
     if (fields.Completed !== undefined) {
       subtask.Completed = fields.Completed;
       subtask.Status = fields.Status;
+      if (fields.Completion_Date !== undefined) subtask.Completion_Date = fields.Completion_Date;
     }
     if (becameCompleted) showToast(t('subtaskCompleted'), 'success');
     editAssignees = savedAssignees;
     editAccountable = savedAccountable;
     editConsulted = savedConsulted;
     editInformed = savedInformed;
-    openEditTaskModal(subtask.Parent_Task_Id, true);
-    if (stFormState) restoreSubtaskForm(subtask.id, stFormState);
-    restoreModalScrollTop(scrollPos);
+    if (document.getElementById('task-title')) {
+      openEditTaskModal(subtask.Parent_Task_Id, true);
+      if (stFormState) restoreSubtaskForm(subtask.id, stFormState);
+      restoreModalScrollTop(scrollPos);
+    } else if (typeof renderTableView === 'function') {
+      renderTableView();   // hors modale (vue tableau) : rafraîchir sans ouvrir la modale
+    }
   } catch (e) {
     console.error('Error updating DoD:', e);
     showToast('Error: ' + e.message, 'error');
@@ -7773,7 +7916,7 @@ function cancelEditSubtask(subtaskId) {
 // après un re-render de la modale (ajout/modif/suppression d'un critère DoD).
 function snapshotSubtaskForm(subtaskId) {
   var snap = null;
-  ['st-title-','st-desc-','st-type-','st-tag-','st-priority-','st-start-','st-due-','st-hours-','st-assignee-'].forEach(function(pfx) {
+  ['st-title-','st-desc-','st-type-','st-tag-','st-priority-','st-start-','st-due-','st-completion-','st-assignee-'].forEach(function(pfx) {
     var el = document.getElementById(pfx + subtaskId);
     if (el) {
       if (!snap) snap = {};
@@ -7794,7 +7937,11 @@ function snapshotSubtaskForm(subtaskId) {
 function restoreSubtaskForm(subtaskId, snap) {
   if (snap) startEditSubtask(subtaskId);   // formulaire fermé avant l'opération : ne pas l'ouvrir
   if (!snap) return;
-  ['st-title-','st-desc-','st-tag-','st-assignee-','st-start-','st-due-','st-hours-'].forEach(function(pfx) {
+  // Fin réelle : ne restaurer la valeur figée que si une saisie était en cours ;
+  // à vide, la valeur fraîche (auto-alimentée à la complétion DoD) reste affichée.
+  var stCompletionEl = document.getElementById('st-completion-' + subtaskId);
+  if (stCompletionEl && snap['st-completion-']) stCompletionEl.value = snap['st-completion-'];
+  ['st-title-','st-desc-','st-tag-','st-assignee-','st-start-','st-due-'].forEach(function(pfx) {
     var el = document.getElementById(pfx + subtaskId);
     if (el && snap[pfx] !== undefined) el.value = snap[pfx];
   });
@@ -7824,7 +7971,7 @@ async function saveEditSubtask(subtaskId, parentTaskId) {
   var contribHidden = document.getElementById('st-contributors-' + subtaskId);
   var startDateInput= document.getElementById('st-start-'    + subtaskId);
   var dueDateInput  = document.getElementById('st-due-'      + subtaskId);
-  var hoursInput    = document.getElementById('st-hours-'    + subtaskId);
+  var completionInput = document.getElementById('st-completion-' + subtaskId);
   if (!titleInput) return;
   var newTitle = titleInput.value.trim();
   if (!newTitle) return;
@@ -7849,11 +7996,11 @@ async function saveEditSubtask(subtaskId, parentTaskId) {
     Description: descInput ? descInput.value : '',
     Status: newStatus,
     Completed: newStatus === 'done',
+    Completion_Date: resolveSubtaskCompletion(_svSt, newStatus === 'done', completionInput ? completionInput.value : ''),
     Priority: prioritySel ? prioritySel.value : 'medium',
     Assignee: newAssignee,
     Contributors: newContributors,
     Tag: tagSel ? tagSel.value : '',
-    Estimated_Hours: hoursInput && hoursInput.value ? parseFloat(hoursInput.value) : null,
     Type: typeEl ? typeEl.value : 'subtask'
   };
   if (newStartDate) fields.Start_Date = newStartDate;
@@ -8634,6 +8781,8 @@ async function createTask() {
     setField(record, 'tasks', 'tag', tagEl.value.trim());
   }
 
+  if (document.getElementById('task-status').value === 'done') setField(record, 'tasks', 'completionDate', todayDateEpoch());
+
   try {
     var createResult = await grist.docApi.applyUserActions([
       ['AddRecord', TASKS_TABLE, null, record]
@@ -8665,6 +8814,7 @@ async function updateTask(taskId) {
   var task = tasks.find(function(t) { return t.id === taskId; });
   var wasNotDone = task && task.Status !== 'done';
   var newStatus = document.getElementById('task-status').value;
+  var completionDateEl = document.getElementById('task-completion-date');
 
   if (newStatus === 'done' && isTaskBlocked(taskId)) {
     var blockers = getTaskDependencies(taskId).filter(function(b) { return b && b.Status !== 'done'; });
@@ -8696,6 +8846,7 @@ async function updateTask(taskId) {
   setField(record, 'tasks', 'category', document.getElementById('task-category').value.trim());
   setField(record, 'tasks', 'projectId', projectId);
   setField(record, 'tasks', 'recurrence', newRecurrence);
+  setField(record, 'tasks', 'completionDate', resolveCompletionDate(task, newStatus, completionDateEl ? completionDateEl.value : ''));
   
   // Add Tag only if the element exists
   var tagEl = document.getElementById('task-tag');
