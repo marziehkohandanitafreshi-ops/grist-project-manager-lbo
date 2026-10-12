@@ -11993,8 +11993,6 @@ function buildPPTTableHTML() {
     t('synthesisActions'), t('synthesisPrereqMetier'), t('synthesisPrereqTech'),
     t('synthesisActors'), t('synthesisAlerts'), t('synthesisDate')
   ];
-    t('synthesisPrereqUser'), t('synthesisActors'), t('synthesisAlerts'), t('synthesisDate')
-  ];
   headers.forEach(function(h) {
     html += '<th style="border:1px solid #cbd5e1;padding:6px 8px;text-align:left;white-space:nowrap;">' + sanitize(h) + '</th>';
   });
