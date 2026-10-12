@@ -12058,15 +12058,7 @@ function buildPPTTableHTML(pageNum) {
   var toComplete = t('synthesisToComplete');
   var now = Math.floor(Date.now() / 1000);
 
-  var html = '<div style="font-family:Calibri,Arial,sans-serif;">';
-  html += '<h2 style="font-size:16pt;font-weight:bold;color:#1e293b;margin:0 0 4px 0;">' +
-    (currentLang === 'fr' ? 'Tableau de Pilotage Détaillé' : 'Detailed Project Dashboard') +
-    ' — ' + sanitize(projectName) +
-    ' <span style="font-size:11pt;color:#64748b;font-weight:normal;">(' + t('synthesisPage') + ' ' + pageNum + ' ' + t('synthesisPageOf') + ' ' + synthesisTotalPages + ')</span></h2>';
-  var toComplete = t('synthesisToComplete');
-  var now = Math.floor(Date.now() / 1000);
-
-  // Tableau avec styles inline pour Office
+  var html = '';
   html += '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:9pt;font-family:Calibri,Arial,sans-serif;">';
 
   // En-tête
@@ -12139,7 +12131,7 @@ function buildPPTTableHTML(pageNum) {
     html += '</tr>';
   });
 
-  html += '</tbody></table></div>';
+  html += '</tbody></table>';
   return html;
 }
 
