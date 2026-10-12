@@ -12337,25 +12337,55 @@ function downloadMermaidGantt() {
 }
 
 // Copie le Gantt Mermaid en image PNG dans le presse-papiers (via mermaid.ink)
+// Copie le Gantt Mermaid en image PNG dans le presse-papiers
+// Utilise mermaid.js (rendu local) + html2canvas (capture) — évite les problèmes CORS
 async function copyMermaidGanttAsImage() {
   var textarea = document.getElementById('synthesis-mermaid-code');
   if (!textarea || !textarea.value) return;
 
   showToast(t('synthesisImageGenerating'), 'info');
 
+  // Conteneur temporaire hors écran
+  var container = document.createElement('div');
+  container.style.cssText = 'position:absolute;left:-9999px;top:0;background:#ffffff;padding:24px;font-family:Calibri,Arial,sans-serif;';
+  document.body.appendChild(container);
+
   try {
-    // Encoder le code Mermaid en base64 (compatible Unicode)
-    var mermaidCode = textarea.value;
-    var base64Code = btoa(unescape(encodeURIComponent(mermaidCode)));
+    if (typeof mermaid === 'undefined') {
+      throw new Error('Mermaid.js non chargé');
+    }
 
-    // Construire l'URL mermaid.ink (PNG, fond blanc, échelle 2x pour qualité)
-    var imageUrl = 'https://mermaid.ink/img/' + base64Code + '?type=png&scale=2&bgColor=!white';
+    // Initialiser mermaid
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'loose',
+      gantt: {
+        axisFormat: '%d/%m/%Y',
+        fontFamily: 'Calibri, Arial, sans-serif'
+      }
+    });
 
-    // Fetch l'image
-    var response = await fetch(imageUrl);
-    if (!response.ok) throw new Error('HTTP ' + response.status);
+    // Rendre le diagramme (génère un SVG)
+    var renderId = 'mermaid-gantt-' + Date.now();
+    var renderResult = await mermaid.render(renderId, textarea.value);
+    container.innerHTML = renderResult.svg;
 
-    var blob = await response.blob();
+    // Capturer avec html2canvas
+    var canvas = await html2canvas(container, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      logging: false,
+      useCORS: false
+    });
+
+    // Convertir le canvas en blob PNG
+    var blob = await new Promise(function(resolve, reject) {
+      canvas.toBlob(function(b) {
+        if (b) resolve(b);
+        else reject(new Error('Échec conversion canvas → blob'));
+      }, 'image/png');
+    });
 
     // Copier dans le presse-papiers
     if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
@@ -12376,6 +12406,11 @@ async function copyMermaidGanttAsImage() {
     }
   } catch (e) {
     console.error('Erreur copie image Mermaid:', e);
-    showToast(t('synthesisImageError'), 'error');
+    showToast(t('synthesisImageError') + ' (' + (e.message || e) + ')', 'error');
+  } finally {
+    // Nettoyer le conteneur temporaire
+    if (container && container.parentNode) {
+      document.body.removeChild(container);
+    }
   }
 }
