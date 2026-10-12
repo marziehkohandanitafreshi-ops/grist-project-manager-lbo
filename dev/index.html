@@ -4557,6 +4557,13 @@
           <button class="btn btn-secondary btn-sm" onclick="copySynthesisForPPT()" title="Colle un tableau éditable dans PowerPoint">📊 <span data-i18n="synthesisCopyPPT">Copier pour PPT</span></button>
           <button class="btn btn-secondary btn-sm" onclick="downloadSynthesisMarkdown()">💾 <span data-i18n="synthesisDownload">Télécharger .md</span></button>
         </div>
+        <div id="synthesis-pagination" style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+          <span style="font-size:13px;color:#64748b;" data-i18n="synthesisPagination">Pagination PPT (3 tâches/page) :</span>
+          <button class="btn btn-secondary btn-sm" id="synthesis-page-prev" onclick="synthesisGoToPage(-1)" style="padding:4px 12px;">◀</button>
+          <span id="synthesis-page-info" style="font-size:13px;font-weight:600;color:#1e293b;min-width:120px;text-align:center;">Page 1 / 1</span>
+          <button class="btn btn-secondary btn-sm" id="synthesis-page-next" onclick="synthesisGoToPage(1)" style="padding:4px 12px;">▶</button>
+          <span id="synthesis-page-tasks" style="font-size:12px;color:#94a3b8;"></span>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
           <div>
             <h4 style="margin-bottom:8px;" data-i18n="synthesisPreview">Aperçu</h4>

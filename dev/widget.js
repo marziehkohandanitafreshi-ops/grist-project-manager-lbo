@@ -200,6 +200,10 @@ var i18n = {
     synthesisCopyPPT: 'Copier pour PPT',
     synthesisCopiedPPT: 'Tableau copié — collez dans PowerPoint !',
     synthesisCopyPPTError: 'Copie PPT indisponible, utilisez le bouton Copier',
+    synthesisPagination: 'Pagination PPT (3 tâches/page) :',
+    synthesisPage: 'Page',
+    synthesisPageOf: 'sur',
+    synthesisTasksCount: 'tâches au total',
     teamUsersTitle: 'Utilisateurs',
     teamUsersSubtitle: 'Gérez les membres de votre équipe',
     manageRoles: 'Rôles',
@@ -578,6 +582,10 @@ var i18n = {
     synthesisCopyPPT: 'Copy for PPT',
     synthesisCopiedPPT: 'Table copied — paste into PowerPoint!',
     synthesisCopyPPTError: 'PPT copy unavailable, use the Copy button',
+    synthesisPagination: 'PPT pagination (3 tasks/page):',
+    synthesisPage: 'Page',
+    synthesisPageOf: 'of',
+    synthesisTasksCount: 'tasks total',
     teamUsersTitle: 'Users',
     teamUsersSubtitle: 'Manage your team members',
     manageRoles: 'Roles',
@@ -11743,6 +11751,52 @@ function getSubtaskStatusIcon(st) {
   return '⬜';
 }
 
+
+// Pagination PPT : 3 tâches par page
+var synthesisCurrentPage = 1;
+var synthesisTasksPerPage = 3;
+var synthesisTotalPages = 1;
+var synthesisProjectTasks = [];
+
+// Retourne les tâches de la page courante
+function getSynthesisPageTasks() {
+  var start = (synthesisCurrentPage - 1) * synthesisTasksPerPage;
+  return synthesisProjectTasks.slice(start, start + synthesisTasksPerPage);
+}
+
+// Met à jour l'affichage de la pagination
+function updateSynthesisPagination() {
+  var info = document.getElementById('synthesis-page-info');
+  var tasksSpan = document.getElementById('synthesis-page-tasks');
+  var prevBtn = document.getElementById('synthesis-page-prev');
+  var nextBtn = document.getElementById('synthesis-page-next');
+  if (!info) return;
+  info.textContent = t('synthesisPage') + ' ' + synthesisCurrentPage + ' ' + t('synthesisPageOf') + ' ' + synthesisTotalPages;
+  if (tasksSpan) tasksSpan.textContent = '(' + synthesisProjectTasks.length + ' ' + t('synthesisTasksCount') + ')';
+  if (prevBtn) prevBtn.disabled = synthesisCurrentPage <= 1;
+  if (nextBtn) nextBtn.disabled = synthesisCurrentPage >= synthesisTotalPages;
+  // Mettre à jour l'aperçu PPT avec la page courante
+  updateSynthesisPPTPreview();
+}
+
+// Navigation entre les pages (-1 = précédent, 1 = suivant)
+function synthesisGoToPage(direction) {
+  var newPage = synthesisCurrentPage + direction;
+  if (newPage < 1 || newPage > synthesisTotalPages) return;
+  synthesisCurrentPage = newPage;
+  updateSynthesisPagination();
+}
+
+// Met à jour l'aperçu avec le HTML de la page courante
+function updateSynthesisPPTPreview() {
+  var preview = document.getElementById('synthesis-preview');
+  if (!preview) return;
+  // Générer le HTML de la page courante et l'afficher dans l'aperçu
+  var htmlContent = buildPPTTableHTML(synthesisCurrentPage);
+  // Extraire juste le tableau pour l'aperçu (sans le wrapper div)
+  preview.innerHTML = htmlContent;
+}
+
 function generateSynthesisMarkdown() {
   var select = document.getElementById('synthesis-project-select');
   var projectId = select ? parseInt(select.value) : null;
@@ -11766,6 +11820,12 @@ function generateSynthesisMarkdown() {
     var db = b.Start_Date || b.Created_At || 0;
     return da - db;
   });
+
+
+  // Initialiser la pagination PPT
+  synthesisProjectTasks = projectTasks;
+  synthesisTotalPages = Math.ceil(projectTasks.length / synthesisTasksPerPage);
+  synthesisCurrentPage = 1;
 
   var toComplete = t('synthesisToComplete');
   var now = Math.floor(Date.now() / 1000);
@@ -11843,6 +11903,9 @@ function generateSynthesisMarkdown() {
   // Afficher la section de sortie
   var output = document.getElementById('synthesis-output');
   if (output) output.style.display = 'block';
+
+  // Mettre à jour la pagination PPT
+  updateSynthesisPagination();
 
   showToast(t('synthesisGenerate') + ' ✓', 'success');
 }
@@ -11962,18 +12025,18 @@ function fallbackCopyPPT(previewEl) {
 }
 
 // Génère un HTML de tableau optimisé pour PowerPoint (styles inline, pas de classes CSS)
-function buildPPTTableHTML() {
+function buildPPTTableHTML(pageNum) {
+  pageNum = pageNum || synthesisCurrentPage;
   var select = document.getElementById('synthesis-project-select');
   var projectId = select ? parseInt(select.value) : null;
   var project = projects.find(function(p) { return p.id === projectId; });
   var projectName = project ? project.Name : 'Projet';
 
-  var projectTasks = tasks.filter(function(tk) { return tk.Project_Id === projectId; });
-  projectTasks.sort(function(a, b) {
-    var da = a.Start_Date || a.Created_At || 0;
-    var db = b.Start_Date || b.Created_At || 0;
-    return da - db;
-  });
+  // Utiliser les tâches déjà filtrées/triées (stockées globalement)
+  var allTasks = synthesisProjectTasks.length > 0 ? synthesisProjectTasks : tasks.filter(function(tk) { return tk.Project_Id === projectId; });
+  // Paginer : 3 tâches par page
+  var start = (pageNum - 1) * synthesisTasksPerPage;
+  var projectTasks = allTasks.slice(start, start + synthesisTasksPerPage);
 
   var toComplete = t('synthesisToComplete');
   var now = Math.floor(Date.now() / 1000);
@@ -11981,7 +12044,10 @@ function buildPPTTableHTML() {
   var html = '<div style="font-family:Calibri,Arial,sans-serif;">';
   html += '<h2 style="font-size:16pt;font-weight:bold;color:#1e293b;margin:0 0 4px 0;">' +
     (currentLang === 'fr' ? 'Tableau de Pilotage Détaillé' : 'Detailed Project Dashboard') +
-    ' — ' + sanitize(projectName) + '</h2>';
+    ' — ' + sanitize(projectName) +
+    ' <span style="font-size:11pt;color:#64748b;font-weight:normal;">(' + t('synthesisPage') + ' ' + pageNum + ' ' + t('synthesisPageOf') + ' ' + synthesisTotalPages + ')</span></h2>';
+  var toComplete = t('synthesisToComplete');
+  var now = Math.floor(Date.now() / 1000);
 
   // Tableau avec styles inline pour Office
   html += '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:9pt;font-family:Calibri,Arial,sans-serif;">';
