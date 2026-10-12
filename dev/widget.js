@@ -12374,7 +12374,7 @@ async function copyMermaidGanttAsImage() {
     // Capturer avec html2canvas
     var canvas = await html2canvas(container, {
       backgroundColor: '#ffffff',
-      scale: 2,
+      scale: 3,
       logging: false,
       useCORS: false
     });
