@@ -176,6 +176,27 @@ var i18n = {
     mostUsed: 'Plus utilisé',
     categories: 'Produits',
     tabTeam: 'Équipe',
+    tabSynthesis: 'Synthèse',
+    synthesisSubtitle: 'Générez un tableau de pilotage détaillé par projet au format Markdown',
+    synthesisSelectProject: 'Sélectionner un projet',
+    synthesisGenerate: 'Générer le Markdown',
+    synthesisCopy: 'Copier',
+    synthesisDownload: 'Télécharger .md',
+    synthesisCopied: 'Markdown copié dans le presse-papiers !',
+    synthesisNoProject: 'Veuillez sélectionner un projet',
+    synthesisNoTasks: 'Aucune tâche dans ce projet',
+    synthesisPhase: 'Phase',
+    synthesisStatus: 'Statut',
+    synthesisProgress: '%',
+    synthesisActions: 'Actions clés',
+    synthesisPrereqMetier: 'Prérequis métiers',
+    synthesisPrereqTech: 'Prérequis technique',
+    synthesisPrereqUser: 'Prérequis utilisateurs',
+    synthesisActors: 'Acteurs',
+    synthesisAlerts: 'Alertes',
+    synthesisDate: "Date d'échéance/réalisation",
+    synthesisToComplete: 'À compléter',
+    synthesisPreview: 'Aperçu',
     teamUsersTitle: 'Utilisateurs',
     teamUsersSubtitle: 'Gérez les membres de votre équipe',
     manageRoles: 'Rôles',
@@ -530,6 +551,27 @@ var i18n = {
     mostUsed: 'Most used',
     categories: 'Products',
     tabTeam: 'Team',
+    tabSynthesis: 'Synthesis',
+    synthesisSubtitle: 'Generate a detailed project dashboard in Markdown format',
+    synthesisSelectProject: 'Select a project',
+    synthesisGenerate: 'Generate Markdown',
+    synthesisCopy: 'Copy',
+    synthesisDownload: 'Download .md',
+    synthesisCopied: 'Markdown copied to clipboard!',
+    synthesisNoProject: 'Please select a project',
+    synthesisNoTasks: 'No tasks in this project',
+    synthesisPhase: 'Phase',
+    synthesisStatus: 'Status',
+    synthesisProgress: '%',
+    synthesisActions: 'Key actions',
+    synthesisPrereqMetier: 'Business prerequisites',
+    synthesisPrereqTech: 'Technical prerequisites',
+    synthesisPrereqUser: 'User prerequisites',
+    synthesisActors: 'Actors',
+    synthesisAlerts: 'Alerts',
+    synthesisDate: 'Due/Completion date',
+    synthesisToComplete: 'To complete',
+    synthesisPreview: 'Preview',
     teamUsersTitle: 'Users',
     teamUsersSubtitle: 'Manage your team members',
     manageRoles: 'Roles',
@@ -1886,7 +1928,7 @@ function switchTab(tabId) {
   if (tabId === 'templates') renderTemplatesView();
   if (tabId === 'stats') renderStatsView();
   if (tabId === 'team') renderTeamView();
-  if (tabId === 'settings') renderSettingsView();
+  if (tabId === 'synthesis') renderSynthesisView();
 }
 
 function restoreActiveTab() {
@@ -3425,7 +3467,7 @@ function refreshAllViews() {
     if (tab === 'templates') renderTemplatesView();
     if (tab === 'stats') renderStatsView();
     if (tab === 'team') renderTeamView();
-  }
+    if (tab === 'synthesis') renderSynthesisView();
 }
 
 // =============================================================================
@@ -9034,6 +9076,7 @@ var WIDGET_TABS = [
   { id: 'templates', label_fr: 'Templates',    label_en: 'Templates',  ownerOnly: true },
   { id: 'stats',     label_fr: 'Stats',        label_en: 'Stats',      ownerOnly: true },
   { id: 'team',      label_fr: 'Équipe',       label_en: 'Team',       ownerOnly: true },
+  { id: 'synthesis', label_fr: 'Synthèse',    label_en: 'Synthesis',  ownerOnly: true }
   { id: 'settings',  label_fr: 'Paramètres',   label_en: 'Settings',   ownerOnly: true }
 ];
 
@@ -9090,7 +9133,7 @@ async function loadWidgetPermissions() {
 function isTabAllowed(tabId) {
   if (userAllowedTabs.length > 0) return userAllowedTabs.indexOf(tabId) !== -1;
   if (isOwner) return true;
-  var ownerTabs = ['team', 'templates', 'stats', 'settings'];
+  var ownerTabs = ['team', 'templates', 'stats', 'settings', 'synthesis'];
   return ownerTabs.indexOf(tabId) === -1;
 }
 
@@ -9114,7 +9157,7 @@ function isTabVisible(tabId) {
 }
 
 function applyTabVisibility() {
-  var allTabs = ['calendar', 'kanban', 'table', 'gantt', 'templates', 'stats', 'team', 'settings'];
+  var allTabs = ['calendar', 'kanban', 'table', 'gantt', 'templates', 'stats', 'team', 'settings', 'synthesis'];
   allTabs.forEach(function(tab) {
     var el = document.querySelector('[data-tab="' + tab + '"]');
     if (el) el.style.display = isTabVisible(tab) ? '' : 'none';
@@ -11653,4 +11696,228 @@ if (!isInsideGrist()) {
       });
     }
   })();
+}
+
+// =============================================================================
+// SYNTHESIS VIEW — Génération de tableau de pilotage Markdown par projet
+// =============================================================================
+
+function renderSynthesisView() {
+  var select = document.getElementById('synthesis-project-select');
+  if (!select) return;
+  // Peupler le sélecteur de projets
+  var html = '<option value="">' + t('synthesisSelectProject') + '</option>';
+  projects.forEach(function(p) {
+    if (p.Status === 'archived') return;
+    var taskCount = tasks.filter(function(tk) { return tk.Project_Id === p.id; }).length;
+    html += '<option value="' + p.id + '">' + sanitize(p.Name) + ' (' + taskCount + ' ' + (currentLang === 'fr' ? 'tâches' : 'tasks') + ')</option>';
+  });
+  select.innerHTML = html;
+  // Masquer la sortie si on change de vue
+  var output = document.getElementById('synthesis-output');
+  if (output) output.style.display = 'none';
+}
+
+function getStatusIcon(status) {
+  switch (status) {
+    case 'done': return '✅';
+    case 'progress': return '🟡';
+    case 'todo': return '⚪';
+    case 'archived': return '📦';
+    default: return '⚪';
+  }
+}
+
+function getSubtaskStatusIcon(st) {
+  if (st.Completed) return '✅';
+  var status = st.Status || 'todo';
+  if (status === 'done') return '✅';
+  if (status === 'progress') return '🔄';
+  return '⬜';
+}
+
+function generateSynthesisMarkdown() {
+  var select = document.getElementById('synthesis-project-select');
+  var projectId = select ? parseInt(select.value) : null;
+  if (!projectId) {
+    showToast(t('synthesisNoProject'), 'error');
+    return;
+  }
+  var project = projects.find(function(p) { return p.id === projectId; });
+  if (!project) return;
+
+  // Filtrer les tâches du projet
+  var projectTasks = tasks.filter(function(tk) { return tk.Project_Id === projectId; });
+  if (projectTasks.length === 0) {
+    showToast(t('synthesisNoTasks'), 'info');
+    return;
+  }
+
+  // Trier les tâches par date de début ou ordre de création
+  projectTasks.sort(function(a, b) {
+    var da = a.Start_Date || a.Created_At || 0;
+    var db = b.Start_Date || b.Created_At || 0;
+    return da - db;
+  });
+
+  var toComplete = t('synthesisToComplete');
+  var now = Math.floor(Date.now() / 1000);
+
+  // Construire le tableau Markdown
+  var md = '# ' + (currentLang === 'fr' ? 'Tableau de Pilotage Détaillé' : 'Detailed Project Dashboard') + ' — ' + project.Name + '\n\n';
+  if (project.Description) md += '> ' + project.Description + '\n\n';
+  md += '| ' + t('synthesisPhase') + ' | ' + t('synthesisStatus') + ' | ' + t('synthesisProgress') + ' | ' + t('synthesisActions') + ' | ' + t('synthesisPrereqMetier') + ' | ' + t('synthesisPrereqTech') + ' | ' + t('synthesisPrereqUser') + ' | ' + t('synthesisActors') + ' | ' + t('synthesisAlerts') + ' | ' + t('synthesisDate') + ' |\n';
+  md += '|-------|--------|---|-------------|-------------------|---------------------|------------------------|---------|---------|------------------------------|\n';
+
+  projectTasks.forEach(function(task) {
+    // Phase = nom de la tâche
+    var phase = sanitize(task.Title).replace(/\|/g, '\|');
+
+    // Statut avec icône
+    var statusIcon = getStatusIcon(task.Status);
+    var statusText = statusLabel(task.Status);
+    var status = statusIcon + ' ' + statusText;
+
+    // Pourcentage d'avancement
+    var progress = getTaskProgress(task);
+    var progressText = progress + '%';
+
+    // Actions clés = sous-tâches en bullet points avec icône de statut
+    var taskSubtasks = getTaskSubtasks(task.id);
+    var actions = '';
+    if (taskSubtasks.length > 0) {
+      actions = taskSubtasks.map(function(st) {
+        var icon = getSubtaskStatusIcon(st);
+        var title = sanitize(st.Title).replace(/\|/g, '\|');
+        return '• ' + title + ' ' + icon;
+      }).join('<br>');
+    } else {
+      actions = toComplete;
+    }
+
+    // Colonnes à compléter
+    var prereqMetier = toComplete;
+    var prereqTech = toComplete;
+    var prereqUser = toComplete;
+    var actors = task.Assignee ? task.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : toComplete;
+    var alerts = '';
+
+    // Alertes : tâche en retard
+    if (task.Due_Date && task.Status !== 'done' && task.Due_Date < now) {
+      alerts = '⚠️ ' + (currentLang === 'fr' ? 'En retard' : 'Overdue');
+    }
+    // Alertes : tâche sans date
+    if (!task.Due_Date && task.Status !== 'done') {
+      alerts = (alerts ? alerts + '<br>' : '') + '⚠️ ' + (currentLang === 'fr' ? 'Pas de date' : 'No date');
+    }
+    if (!alerts) alerts = toComplete;
+
+    // Date d'échéance/réalisation
+    var dateText = '';
+    if (task.Status === 'done') {
+      // Date de réalisation : utiliser la date de complétion si disponible, sinon la date d'échéance
+      var completionDate = task.Completion_Date || task.Due_Date;
+      dateText = completionDate ? formatDate(completionDate) : toComplete;
+    } else {
+      dateText = task.Due_Date ? formatDate(task.Due_Date) : toComplete;
+    }
+
+    md += '| ' + phase + ' | ' + status + ' | ' + progressText + ' | ' + actions + ' | ' + prereqMetier + ' | ' + prereqTech + ' | ' + prereqUser + ' | ' + actors + ' | ' + alerts + ' | ' + dateText + ' |\n';
+  });
+
+  // Afficher le markdown
+  var textarea = document.getElementById('synthesis-markdown');
+  if (textarea) textarea.value = md;
+
+  // Afficher l'aperçu
+  var preview = document.getElementById('synthesis-preview');
+  if (preview) preview.innerHTML = renderMarkdownPreview(md);
+
+  // Afficher la section de sortie
+  var output = document.getElementById('synthesis-output');
+  if (output) output.style.display = 'block';
+
+  showToast(t('synthesisGenerate') + ' ✓', 'success');
+}
+
+// Aperçu HTML simple du markdown (tableau uniquement)
+function renderMarkdownPreview(md) {
+  var lines = md.split('\n');
+  var html = '';
+  var inTable = false;
+  var isHeader = false;
+
+  lines.forEach(function(line) {
+    line = line.trim();
+    if (line.startsWith('# ')) {
+      html += '<h1 style="font-size:18px;font-weight:700;margin-bottom:12px;">' + sanitize(line.substring(2)) + '</h1>';
+    } else if (line.startsWith('> ')) {
+      html += '<p style="color:#64748b;font-style:italic;margin-bottom:12px;">' + sanitize(line.substring(2)) + '</p>';
+    } else if (line.startsWith('|')) {
+      if (!inTable) {
+        html += '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead>';
+        inTable = true;
+        isHeader = true;
+      }
+      var cells = line.split('|').filter(function(c, i, arr) { return i > 0 && i < arr.length - 1; });
+      var tag = isHeader ? 'th' : 'td';
+      var style = isHeader
+        ? 'padding:8px;border:1px solid #e2e8f0;background:#3b82f6;color:white;font-weight:600;text-align:left;'
+        : 'padding:8px;border:1px solid #e2e8f0;vertical-align:top;';
+      html += '<tr>';
+      cells.forEach(function(cell) {
+        var content = cell.trim().replace(/<br>/g, '<br>');
+        html += '<' + tag + ' style="' + style + '">' + content + '</' + tag + '>';
+      });
+      html += '</tr>';
+      isHeader = false;
+      // Détecter la fin du tableau (ligne de séparation)
+      if (line.indexOf('---') !== -1) {
+        html += '</thead><tbody>';
+      }
+    } else if (inTable && line === '') {
+      html += '</tbody></table>';
+      inTable = false;
+    }
+  });
+  if (inTable) html += '</tbody></table>';
+  return html;
+}
+
+function copySynthesisMarkdown() {
+  var textarea = document.getElementById('synthesis-markdown');
+  if (!textarea || !textarea.value) return;
+  textarea.select();
+  textarea.setSelectionRange(0, 99999);
+  try {
+    document.execCommand('copy');
+    showToast(t('synthesisCopied'), 'success');
+  } catch (e) {
+    // Fallback: utiliser l'API Clipboard si disponible
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(textarea.value).then(function() {
+        showToast(t('synthesisCopied'), 'success');
+      });
+    }
+  }
+}
+
+function downloadSynthesisMarkdown() {
+  var textarea = document.getElementById('synthesis-markdown');
+  if (!textarea || !textarea.value) return;
+  var select = document.getElementById('synthesis-project-select');
+  var projectId = select ? select.value : 'projet';
+  var project = projects.find(function(p) { return p.id === parseInt(projectId); });
+  var filename = 'synthese-' + (project ? project.Name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'projet') + '.md';
+
+  var blob = new Blob([textarea.value], { type: 'text/markdown;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(t('synthesisDownload') + ' ✓', 'success');
 }
