@@ -1928,9 +1928,9 @@ function switchTab(tabId) {
   if (tabId === 'templates') renderTemplatesView();
   if (tabId === 'stats') renderStatsView();
   if (tabId === 'team') renderTeamView();
+  if (tabId === 'settings') renderSettingsView();
   if (tabId === 'synthesis') renderSynthesisView();
 }
-
 function restoreActiveTab() {
   var savedTab = localStorage.getItem('pm-active-tab');
   if (savedTab) {
@@ -3467,9 +3467,10 @@ function refreshAllViews() {
     if (tab === 'templates') renderTemplatesView();
     if (tab === 'stats') renderStatsView();
     if (tab === 'team') renderTeamView();
+    if (tab === 'settings') renderSettingsView();
     if (tab === 'synthesis') renderSynthesisView();
+  }
 }
-
 // =============================================================================
 // CALENDAR VIEW
 // =============================================================================
@@ -9076,7 +9077,7 @@ var WIDGET_TABS = [
   { id: 'templates', label_fr: 'Templates',    label_en: 'Templates',  ownerOnly: true },
   { id: 'stats',     label_fr: 'Stats',        label_en: 'Stats',      ownerOnly: true },
   { id: 'team',      label_fr: 'Équipe',       label_en: 'Team',       ownerOnly: true },
-  { id: 'synthesis', label_fr: 'Synthèse',    label_en: 'Synthesis',  ownerOnly: true }
+  { id: 'synthesis', label_fr: 'Synthèse',    label_en: 'Synthesis',  ownerOnly: true },
   { id: 'settings',  label_fr: 'Paramètres',   label_en: 'Settings',   ownerOnly: true }
 ];
 
