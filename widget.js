@@ -1841,6 +1841,11 @@ function switchTab(tabId) {
 function restoreActiveTab() {
   var savedTab = localStorage.getItem('pm-active-tab');
   if (savedTab) {
+    // Si l'onglet sauvegardé n'est pas visible (non autorisé ou caché par défaut), basculer vers Kanban
+    if (typeof isTabVisible === 'function' && !isTabVisible(savedTab)) {
+      switchTab('kanban');
+      return;
+    }
     switchTab(savedTab);
   }
 }
@@ -8938,16 +8943,54 @@ function isTabAllowed(tabId) {
   return ownerTabs.indexOf(tabId) === -1;
 }
 
-function applyOwnerRestrictions() {
+// Onglets masqués par défaut — accessibles via le bouton (+) dans la barre d'onglets
+var HIDDEN_TABS_BY_DEFAULT = ['calendar', 'templates', 'team'];
+
+function areHiddenTabsShown() {
+  return localStorage.getItem('pm-show-hidden-tabs') === 'true';
+}
+
+function toggleHiddenTabs() {
+  var show = !areHiddenTabsShown();
+  localStorage.setItem('pm-show-hidden-tabs', show ? 'true' : 'false');
+  applyTabVisibility();
+}
+
+function isTabVisible(tabId) {
+  if (!isTabAllowed(tabId)) return false;
+  if (HIDDEN_TABS_BY_DEFAULT.indexOf(tabId) !== -1 && !areHiddenTabsShown()) return false;
+  return true;
+}
+
+function applyTabVisibility() {
   var allTabs = ['calendar', 'kanban', 'table', 'gantt', 'templates', 'stats', 'team', 'settings'];
   allTabs.forEach(function(tab) {
     var el = document.querySelector('[data-tab="' + tab + '"]');
-    if (el) el.style.display = isTabAllowed(tab) ? '' : 'none';
+    if (el) el.style.display = isTabVisible(tab) ? '' : 'none';
   });
+  updateHiddenTabsButton();
+  // Si l'onglet actif est masqué, basculer vers Kanban
   var activeBtn = document.querySelector('.tab-btn.active');
-  if (activeBtn && !isTabAllowed(activeBtn.getAttribute('data-tab'))) {
-    switchTab('calendar');
+  if (activeBtn && !isTabVisible(activeBtn.getAttribute('data-tab'))) {
+    switchTab('kanban');
   }
+}
+
+function updateHiddenTabsButton() {
+  var btn = document.getElementById('toggle-hidden-tabs-btn');
+  if (!btn) return;
+  var showHidden = areHiddenTabsShown();
+  btn.textContent = showHidden ? '\u2212' : '+';
+  btn.title = showHidden
+    ? (currentLang === 'fr' ? 'Masquer les onglets supplémentaires' : 'Hide extra tabs')
+    : (currentLang === 'fr' ? 'Afficher plus d\'onglets' : 'Show more tabs');
+  // Masquer le bouton s'il n'y a aucun onglet caché autorisé
+  var hasHiddenAllowed = HIDDEN_TABS_BY_DEFAULT.some(function(tab) { return isTabAllowed(tab); });
+  btn.style.display = hasHiddenAllowed ? '' : 'none';
+}
+
+function applyOwnerRestrictions() {
+  applyTabVisibility();
 }
 
 // =============================================================================

@@ -98,6 +98,7 @@
     }
     .tab-btn:hover { color: #1e293b; background: #e2e8f0; }
     .tab-btn.active { color: #1e293b; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .toggle-hidden-tabs-btn { padding: 8px 12px; font-size: 16px; font-weight: 700; line-height: 1; min-width: 36px; justify-content: center; }
     .tab-content { display: none; padding: 0 24px 24px; }
     .tab-content.active { display: block; }
 
@@ -3760,6 +3761,8 @@
       background: #1e293b;
       color: white;
     }
+    body.dark-mode .toggle-hidden-tabs-btn { color: #94a3b8; }
+    body.dark-mode .toggle-hidden-tabs-btn:hover { background: #475569; color: #e2e8f0; }
     body.dark-mode .kanban-column {
       background: #1e293b;
     }
@@ -4079,6 +4082,7 @@
           <button class="tab-btn" data-tab="stats" onclick="switchTab('stats')">📈 <span data-i18n="tabStats">Stats</span></button>
           <button class="tab-btn" data-tab="team" onclick="switchTab('team')">👥 <span data-i18n="tabTeam">Équipe</span></button>
           <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">⚙️ <span data-i18n="tabSettings">Paramètres</span></button>
+          <button class="tab-btn toggle-hidden-tabs-btn" id="toggle-hidden-tabs-btn" onclick="toggleHiddenTabs()" title="Afficher plus d'onglets" style="display:none;">+</button>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div id="project-selector" class="project-selector"></div>
