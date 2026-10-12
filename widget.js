@@ -209,6 +209,10 @@ var i18n = {
     synthesisMermaidCopied: 'Code Mermaid copié !',
     synthesisMermaidNoTasks: 'Aucune tâche avec des dates dans ce projet',
     synthesisMermaidGenerated: 'Gantt Mermaid généré',
+    synthesisCopyImage: 'Copier image',
+    synthesisImageCopied: 'Image Gantt copiée — collez dans PowerPoint !',
+    synthesisImageError: 'Erreur génération image, réessayez',
+    synthesisImageGenerating: 'Génération de l\'image en cours...',
     teamUsersTitle: 'Utilisateurs',
     teamUsersSubtitle: 'Gérez les membres de votre équipe',
     manageRoles: 'Rôles',
@@ -596,6 +600,10 @@ var i18n = {
     synthesisMermaidCopied: 'Mermaid code copied!',
     synthesisMermaidNoTasks: 'No tasks with dates in this project',
     synthesisMermaidGenerated: 'Mermaid Gantt generated',
+    synthesisCopyImage: 'Copy image',
+    synthesisImageCopied: 'Gantt image copied — paste into PowerPoint!',
+    synthesisImageError: 'Image generation error, please retry',
+    synthesisImageGenerating: 'Generating image...',
     teamUsersTitle: 'Users',
     teamUsersSubtitle: 'Manage your team members',
     manageRoles: 'Roles',
@@ -12212,22 +12220,29 @@ function generateMermaidGantt() {
   md += '    dateFormat YYYY-MM-DD\n';
   md += '    axisFormat %d/%m/%Y\n';
   md += '    todayMarker on\n';
-  md += '\n';
-
-  // Section pour les tâches parentes
-  md += '    section ' + mermaidEscape(currentLang === 'fr' ? 'Tâches' : 'Tasks') + '\n';
 
   var taskIdMap = {}; // Map task.id -> mermaid id
 
-  projectTasks.forEach(function(task, idx) {
+  // Une section par tâche, avec la tâche parente + sous-tâches + jalons
+  projectTasks.forEach(function(task) {
     var mid = 't' + task.id;
     taskIdMap[task.id] = mid;
 
     var startDate = mermaidDate(task.Start_Date || task.Due_Date);
     var endDate = mermaidDate(task.Due_Date || task.Start_Date);
 
-    // Construire la ligne de la tâche
-    var line = '    ' + mermaidEscape(task.Title);
+    // Récupérer les sous-tâches et jalons
+    var taskSubtasks = getTaskSubtasks(task.id);
+    var milestones = taskSubtasks.filter(function(st) { return isMilestone(st); });
+    var subtasksOnly = taskSubtasks.filter(function(st) { return !isMilestone(st); });
+
+    md += '\n';
+    md += '    section ' + mermaidEscape(task.Title) + '\n';
+
+    // Tâche parente (toujours affichée, même sans sous-tâches)
+    var statusTag = '';
+    if (task.Status === 'done') statusTag = 'done,';
+    else if (task.Status === 'progress') statusTag = 'active,';
 
     // Dépendances : after t{depId}
     var deps = getTaskDependencies(task.id);
@@ -12235,56 +12250,28 @@ function generateMermaidGantt() {
     if (deps.length > 0) {
       var depIds = deps.map(function(d) { return taskIdMap[d.id] || ('t' + d.id); }).filter(Boolean);
       if (depIds.length > 0) {
-        afterClause = 'after ' + depIds.join(' ');
+        afterClause = 'after ' + depIds.join(' ') + ', ';
       }
     }
 
-    // Tags de statut
-    var statusTag = '';
-    if (task.Status === 'done') statusTag = 'done,';
-    else if (task.Status === 'progress') statusTag = 'active,';
-
+    var line = '    ' + mermaidEscape(task.Title) + ' :' + statusTag + mid + ', ' + afterClause;
     if (startDate && endDate && startDate !== endDate) {
-      line += ' :' + statusTag + mid + ', ' + startDate + ', ' + endDate;
+      line += startDate + ', ' + endDate;
     } else if (startDate) {
-      line += ' :' + statusTag + mid + ', ' + startDate + ', 1d';
+      line += startDate + ', 1d';
+    } else if (endDate) {
+      line += endDate + ', 1d';
     } else {
-      line += ' :' + statusTag + mid + ', ' + endDate + ', 1d';
+      line += '2024-01-01, 1d'; // fallback
     }
-
-    // Ajouter la dépendance après les dates (Mermaid accepte after avant ou après)
-    if (afterClause) {
-      // Reformater : mettre after avant les dates
-      line = '    ' + mermaidEscape(task.Title) + ' :' + statusTag + mid + ', ' + afterClause;
-      if (startDate && endDate && startDate !== endDate) {
-        line += ', ' + startDate + ', ' + endDate;
-      } else if (startDate) {
-        line += ', ' + startDate + ', 1d';
-      }
-    }
-
     md += line + '\n';
-  });
-
-  // Sections pour les sous-tâches et jalons de chaque tâche
-  projectTasks.forEach(function(task) {
-    var taskSubtasks = getTaskSubtasks(task.id);
-    if (taskSubtasks.length === 0) return;
-
-    // Trier les sous-tâches : jalons d'abord, puis par date
-    var milestones = taskSubtasks.filter(function(st) { return isMilestone(st); });
-    var subtasksOnly = taskSubtasks.filter(function(st) { return !isMilestone(st); });
-
-    if (milestones.length === 0 && subtasksOnly.length === 0) return;
-
-    md += '\n';
-    md += '    section ' + mermaidEscape(task.Title) + '\n';
 
     // Sous-tâches
     subtasksOnly.forEach(function(st) {
       var sid = 's' + st.id;
       var stStart = mermaidDate(st.Start_Date || st.Due_Date);
       var stEnd = mermaidDate(st.Due_Date || st.Start_Date);
+      if (!stStart && !stEnd) return; // Pas de date, ignorer
 
       var stLine = '    ↳ ' + mermaidEscape(st.Title);
       var stStatusTag = st.Completed ? 'done,' : (st.Status === 'progress' ? 'active,' : '');
@@ -12293,21 +12280,19 @@ function generateMermaidGantt() {
         stLine += ' :' + stStatusTag + sid + ', ' + stStart + ', ' + stEnd;
       } else if (stStart) {
         stLine += ' :' + stStatusTag + sid + ', ' + stStart + ', 1d';
-      } else if (stEnd) {
-        stLine += ' :' + stStatusTag + sid + ', ' + stEnd + ', 1d';
       } else {
-        return; // Pas de date, ignorer
+        stLine += ' :' + stStatusTag + sid + ', ' + stEnd + ', 1d';
       }
       md += stLine + '\n';
     });
 
     // Jalons (milestones)
     milestones.forEach(function(st) {
-      var mid = 'm' + st.id;
+      var msid = 'm' + st.id;
       var mDate = mermaidDate(st.Due_Date || st.Start_Date);
       if (!mDate) return;
 
-      var mLine = '    ◆ ' + mermaidEscape(st.Title) + ' :milestone,' + (st.Completed ? 'done,' : '') + mid + ', ' + mDate + ', 0d';
+      var mLine = '    ◆ ' + mermaidEscape(st.Title) + ' :milestone,' + (st.Completed ? 'done,' : '') + msid + ', ' + mDate + ', 0d';
       md += mLine + '\n';
     });
   });
@@ -12321,8 +12306,6 @@ function generateMermaidGantt() {
 
   showToast(t('synthesisMermaidGenerated') + ' ✓', 'success');
 }
-
-// Copie le code Mermaid dans le presse-papiers
 function copyMermaidGantt() {
   var textarea = document.getElementById('synthesis-mermaid-code');
   if (!textarea || !textarea.value) return;
@@ -12359,4 +12342,48 @@ function downloadMermaidGantt() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showToast(t('synthesisDownloadMermaid') + ' ✓', 'success');
+}
+
+// Copie le Gantt Mermaid en image PNG dans le presse-papiers (via mermaid.ink)
+async function copyMermaidGanttAsImage() {
+  var textarea = document.getElementById('synthesis-mermaid-code');
+  if (!textarea || !textarea.value) return;
+
+  showToast(t('synthesisImageGenerating'), 'info');
+
+  try {
+    // Encoder le code Mermaid en base64 (compatible Unicode)
+    var mermaidCode = textarea.value;
+    var base64Code = btoa(unescape(encodeURIComponent(mermaidCode)));
+
+    // Construire l'URL mermaid.ink (PNG, fond blanc, échelle 2x pour qualité)
+    var imageUrl = 'https://mermaid.ink/img/' + base64Code + '?type=png&scale=2&bgColor=!white';
+
+    // Fetch l'image
+    var response = await fetch(imageUrl);
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+
+    var blob = await response.blob();
+
+    // Copier dans le presse-papiers
+    if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+      var item = new ClipboardItem({ 'image/png': blob });
+      await navigator.clipboard.write([item]);
+      showToast(t('synthesisImageCopied'), 'success');
+    } else {
+      // Fallback : télécharger l'image
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'gantt.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(t('synthesisImageCopied'), 'success');
+    }
+  } catch (e) {
+    console.error('Erreur copie image Mermaid:', e);
+    showToast(t('synthesisImageError'), 'error');
+  }
 }
