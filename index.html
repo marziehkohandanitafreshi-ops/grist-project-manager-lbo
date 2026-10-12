@@ -99,6 +99,13 @@
     .tab-btn:hover { color: #1e293b; background: #e2e8f0; }
     .tab-btn.active { color: #1e293b; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
     .toggle-hidden-tabs-btn { padding: 8px 12px; font-size: 16px; font-weight: 700; line-height: 1; min-width: 36px; justify-content: center; }
+    .synthesis-preview table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .synthesis-preview th { padding: 8px; border: 1px solid #e2e8f0; background: #3b82f6; color: white; font-weight: 600; text-align: left; }
+    .synthesis-preview td { padding: 8px; border: 1px solid #e2e8f0; vertical-align: top; }
+    .synthesis-preview h1 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+    #synthesis-markdown { width: 100%; height: 600px; font-family: monospace; font-size: 12px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; resize: vertical; box-sizing: border-box; }
+    #synthesis-project-select { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; min-width: 250px; }
+    @media (max-width: 768px) { .synthesis-controls { flex-direction: column; align-items: stretch; } #synthesis-project-select { width: 100%; } }
     .tab-content { display: none; padding: 0 24px 24px; }
     .tab-content.active { display: block; }
 
@@ -4105,6 +4112,7 @@
           <button class="tab-btn" data-tab="stats" onclick="switchTab('stats')">📈 <span data-i18n="tabStats">Stats</span></button>
           <button class="tab-btn" data-tab="team" onclick="switchTab('team')">👥 <span data-i18n="tabTeam">Équipe</span></button>
           <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">⚙️ <span data-i18n="tabSettings">Paramètres</span></button>
+          <button class="tab-btn" data-tab="synthesis" onclick="switchTab('synthesis')">📋 <span data-i18n="tabSynthesis">Synthèse</span></button>
           <button class="tab-btn toggle-hidden-tabs-btn" id="toggle-hidden-tabs-btn" onclick="toggleHiddenTabs()" title="Afficher plus d'onglets" style="display:none;">+</button>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
@@ -4526,6 +4534,36 @@
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
               </svg>
             </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: SYNTHESIS -->
+    <div class="tab-content" id="tab-synthesis">
+      <div class="section-title">
+        <h2 data-i18n="tabSynthesis">Synthèse</h2>
+        <p data-i18n="synthesisSubtitle">Générez un tableau de pilotage détaillé par projet au format Markdown</p>
+      </div>
+      <div class="synthesis-controls" style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+        <select id="synthesis-project-select" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;min-width:250px;">
+          <option value="" data-i18n="synthesisSelectProject">Sélectionner un projet</option>
+        </select>
+        <button class="btn btn-primary" onclick="generateSynthesisMarkdown()" data-i18n="synthesisGenerate">Générer le Markdown</button>
+      </div>
+      <div id="synthesis-output" style="display:none;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button class="btn btn-secondary btn-sm" onclick="copySynthesisMarkdown()">📋 <span data-i18n="synthesisCopy">Copier</span></button>
+          <button class="btn btn-secondary btn-sm" onclick="downloadSynthesisMarkdown()">💾 <span data-i18n="synthesisDownload">Télécharger .md</span></button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <h4 style="margin-bottom:8px;" data-i18n="synthesisPreview">Aperçu</h4>
+            <div id="synthesis-preview" class="synthesis-preview" style="border:1px solid #e2e8f0;border-radius:8px;padding:16px;background:white;overflow:auto;max-height:600px;"></div>
+          </div>
+          <div>
+            <h4 style="margin-bottom:8px;">Markdown</h4>
+            <textarea id="synthesis-markdown" readonly style="width:100%;height:600px;font-family:monospace;font-size:12px;border:1px solid #e2e8f0;border-radius:8px;padding:12px;resize:vertical;"></textarea>
           </div>
         </div>
       </div>
