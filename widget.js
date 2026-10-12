@@ -189,8 +189,7 @@ var i18n = {
     synthesisStatus: 'Statut',
     synthesisProgress: '%',
     synthesisActions: 'Actions clés',
-    synthesisPrereqMetier: 'Prérequis métiers',
-    synthesisPrereqTech: 'Prérequis technique',
+    synthesisPrereq: 'Prérequis',
     synthesisPrereqUser: 'Prérequis utilisateurs',
     synthesisActors: 'Acteurs',
     synthesisAlerts: 'Alertes',
@@ -571,8 +570,7 @@ var i18n = {
     synthesisStatus: 'Status',
     synthesisProgress: '%',
     synthesisActions: 'Key actions',
-    synthesisPrereqMetier: 'Business prerequisites',
-    synthesisPrereqTech: 'Technical prerequisites',
+    synthesisPrereq: 'Prerequisites',
     synthesisPrereqUser: 'User prerequisites',
     synthesisActors: 'Actors',
     synthesisAlerts: 'Alerts',
@@ -11833,8 +11831,8 @@ function generateSynthesisMarkdown() {
   // Construire le tableau Markdown
   var md = '# ' + (currentLang === 'fr' ? 'Tableau de Pilotage Détaillé' : 'Detailed Project Dashboard') + ' — ' + project.Name + '\n\n';
   if (project.Description) md += '> ' + project.Description + '\n\n';
-  md += '| ' + t('synthesisPhase') + ' | ' + t('synthesisProgress') + ' | ' + t('synthesisActions') + ' | ' + t('synthesisPrereqMetier') + ' | ' + t('synthesisPrereqTech') + ' | ' + t('synthesisActors') + ' | ' + t('synthesisAlerts') + ' | ' + t('synthesisDate') + ' |\n';
-  md += '|-------|---|-------------|-------------------|---------------------|---------|---------|------------------------------|\n';
+  md += '| ' + t('synthesisPhase') + ' | ' + t('synthesisProgress') + ' | ' + t('synthesisActions') + ' | ' + t('synthesisPrereq') + ' | ' + t('synthesisActors') + ' | ' + t('synthesisAlerts') + ' | ' + t('synthesisDate') + ' |\n';
+  md += '|-------|---|-------------|------------|---------|---------|------------------------------|\n';
 
   projectTasks.forEach(function(task) {
     // Phase = nom de la tâche
@@ -11863,7 +11861,6 @@ function generateSynthesisMarkdown() {
     }
 
     // Colonnes à compléter
-    var prereqMetier = toComplete;
     var prereqTech = toComplete;
     var prereqUser = toComplete;
     var actors = task.Assignee ? task.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : toComplete;
@@ -11889,7 +11886,7 @@ function generateSynthesisMarkdown() {
       dateText = task.Due_Date ? formatDate(task.Due_Date) : toComplete;
     }
 
-    md += '| ' + phase + ' | ' + progressText + ' | ' + actions + ' | ' + prereqMetier + ' | ' + prereqTech + ' | ' + actors + ' | ' + alerts + ' | ' + dateText + ' |\n';
+    md += '| ' + phase + ' | ' + progressText + ' | ' + actions + ' | ' + prereqTech + ' | ' + actors + ' | ' + alerts + ' | ' + dateText + ' |\n';
   });
 
   // Afficher le markdown
@@ -12056,14 +12053,13 @@ function buildPPTTableHTML(pageNum) {
   html += '<thead><tr style="background-color:#3b82f6;color:#ffffff;font-weight:bold;">';
   var headers = [
     t('synthesisPhase'), t('synthesisProgress'),
-    t('synthesisActions'), t('synthesisPrereqMetier'), t('synthesisPrereqTech'),
+    t('synthesisActions'), t('synthesisPrereq'),
     t('synthesisActors'), t('synthesisAlerts'), t('synthesisDate')
   ];
   headers.forEach(function(h) {
     html += '<th style="border:1px solid #cbd5e1;padding:6px 8px;text-align:left;white-space:nowrap;">' + sanitize(h) + '</th>';
   });
   html += '</tr></thead><tbody>';
-
   // Lignes
   projectTasks.forEach(function(task, idx) {
     var bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
@@ -12093,7 +12089,6 @@ function buildPPTTableHTML(pageNum) {
     html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;vertical-align:top;">' + actionsHtml + '</td>';
 
     // Prérequis (à compléter)
-    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;color:#94a3b8;vertical-align:top;">' + sanitize(toComplete) + '</td>';
     html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;color:#94a3b8;vertical-align:top;">' + sanitize(toComplete) + '</td>';
 
     // Acteurs
