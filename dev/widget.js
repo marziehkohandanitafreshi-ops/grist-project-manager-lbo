@@ -197,6 +197,9 @@ var i18n = {
     synthesisDate: "Date d'échéance/réalisation",
     synthesisToComplete: 'À compléter',
     synthesisPreview: 'Aperçu',
+    synthesisCopyPPT: 'Copier pour PPT',
+    synthesisCopiedPPT: 'Tableau copié — collez dans PowerPoint !',
+    synthesisCopyPPTError: 'Copie PPT indisponible, utilisez le bouton Copier',
     teamUsersTitle: 'Utilisateurs',
     teamUsersSubtitle: 'Gérez les membres de votre équipe',
     manageRoles: 'Rôles',
@@ -572,6 +575,9 @@ var i18n = {
     synthesisDate: 'Due/Completion date',
     synthesisToComplete: 'To complete',
     synthesisPreview: 'Preview',
+    synthesisCopyPPT: 'Copy for PPT',
+    synthesisCopiedPPT: 'Table copied — paste into PowerPoint!',
+    synthesisCopyPPTError: 'PPT copy unavailable, use the Copy button',
     teamUsersTitle: 'Users',
     teamUsersSubtitle: 'Manage your team members',
     manageRoles: 'Roles',
@@ -11901,6 +11907,166 @@ function copySynthesisMarkdown() {
       });
     }
   }
+}
+
+// Copie le tableau en HTML formaté pour PowerPoint (tableau éditable)
+function copySynthesisForPPT() {
+  var preview = document.getElementById('synthesis-preview');
+  var textarea = document.getElementById('synthesis-markdown');
+  if (!preview || !textarea || !textarea.value) return;
+
+  // Construire un HTML propre pour Office (tableau avec styles inline)
+  var htmlContent = buildPPTTableHTML();
+
+  // Méthode 1 : API Clipboard moderne (text/html)
+  if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+    try {
+      var item = new ClipboardItem({
+        'text/html': new Blob([htmlContent], { type: 'text/html' }),
+        'text/plain': new Blob([textarea.value], { type: 'text/plain' })
+      });
+      navigator.clipboard.write([item]).then(function() {
+        showToast(t('synthesisCopiedPPT'), 'success');
+      }).catch(function(err) {
+        console.warn('Clipboard API failed:', err);
+        fallbackCopyPPT(preview);
+      });
+      return;
+    } catch (e) {
+      console.warn('ClipboardItem failed:', e);
+    }
+  }
+
+  // Méthode 2 : Fallback — sélectionner le preview et execCommand('copy')
+  fallbackCopyPPT(preview);
+}
+
+// Fallback : sélectionne le contenu HTML du preview et copie
+function fallbackCopyPPT(previewEl) {
+  var range = document.createRange();
+  range.selectNodeContents(previewEl);
+  var selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+  try {
+    var success = document.execCommand('copy');
+    if (success) {
+      showToast(t('synthesisCopiedPPT'), 'success');
+    } else {
+      showToast(t('synthesisCopyPPTError'), 'error');
+    }
+  } catch (e) {
+    showToast(t('synthesisCopyPPTError'), 'error');
+  }
+  selection.removeAllRanges();
+}
+
+// Génère un HTML de tableau optimisé pour PowerPoint (styles inline, pas de classes CSS)
+function buildPPTTableHTML() {
+  var select = document.getElementById('synthesis-project-select');
+  var projectId = select ? parseInt(select.value) : null;
+  var project = projects.find(function(p) { return p.id === projectId; });
+  var projectName = project ? project.Name : 'Projet';
+
+  var projectTasks = tasks.filter(function(tk) { return tk.Project_Id === projectId; });
+  projectTasks.sort(function(a, b) {
+    var da = a.Start_Date || a.Created_At || 0;
+    var db = b.Start_Date || b.Created_At || 0;
+    return da - db;
+  });
+
+  var toComplete = t('synthesisToComplete');
+  var now = Math.floor(Date.now() / 1000);
+
+  var html = '<div style="font-family:Calibri,Arial,sans-serif;">';
+  html += '<h2 style="font-size:16pt;font-weight:bold;color:#1e293b;margin:0 0 4px 0;">' +
+    (currentLang === 'fr' ? 'Tableau de Pilotage Détaillé' : 'Detailed Project Dashboard') +
+    ' — ' + sanitize(projectName) + '</h2>';
+
+  // Tableau avec styles inline pour Office
+  html += '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:9pt;font-family:Calibri,Arial,sans-serif;">';
+
+  // En-tête
+  html += '<thead><tr style="background-color:#3b82f6;color:#ffffff;font-weight:bold;">';
+  var headers = [
+    t('synthesisPhase'), t('synthesisStatus'), t('synthesisProgress'),
+    t('synthesisActions'), t('synthesisPrereqMetier'), t('synthesisPrereqTech'),
+    t('synthesisPrereqUser'), t('synthesisActors'), t('synthesisAlerts'), t('synthesisDate')
+  ];
+  headers.forEach(function(h) {
+    html += '<th style="border:1px solid #cbd5e1;padding:6px 8px;text-align:left;white-space:nowrap;">' + sanitize(h) + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  // Lignes
+  projectTasks.forEach(function(task, idx) {
+    var bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+    html += '<tr style="background-color:' + bgColor + ';">';
+
+    // Phase
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;font-weight:bold;vertical-align:top;">' + sanitize(task.Title) + '</td>';
+
+    // Statut avec couleur
+    var statusColors = { done: '#22c55e', progress: '#3b82f6', todo: '#f59e0b', archived: '#94a3b8' };
+    var stColor = statusColors[task.Status] || '#94a3b8';
+    var stIcon = getStatusIcon(task.Status);
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;vertical-align:top;white-space:nowrap;">' +
+      '<span style="color:' + stColor + ';font-weight:bold;">' + stIcon + '</span> ' + sanitize(statusLabel(task.Status)) + '</td>';
+
+    // %
+    var progress = getTaskProgress(task);
+    var progressColor = progress === 100 ? '#22c55e' : (progress >= 50 ? '#3b82f6' : '#f59e0b');
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;text-align:center;vertical-align:top;">' +
+      '<span style="color:' + progressColor + ';font-weight:bold;">' + progress + '%</span></td>';
+
+    // Actions clés (sous-tâches)
+    var taskSubtasks = getTaskSubtasks(task.id);
+    var actionsHtml = '';
+    if (taskSubtasks.length > 0) {
+      actionsHtml = taskSubtasks.map(function(st) {
+        var icon = getSubtaskStatusIcon(st);
+        return icon + ' ' + sanitize(st.Title);
+      }).join('<br>');
+    } else {
+      actionsHtml = '<span style="color:#94a3b8;">' + sanitize(toComplete) + '</span>';
+    }
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;vertical-align:top;">' + actionsHtml + '</td>';
+
+    // Prérequis (à compléter)
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;color:#94a3b8;vertical-align:top;">' + sanitize(toComplete) + '</td>';
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;color:#94a3b8;vertical-align:top;">' + sanitize(toComplete) + '</td>';
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;color:#94a3b8;vertical-align:top;">' + sanitize(toComplete) + '</td>';
+
+    // Acteurs
+    var actorsText = task.Assignee ? task.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : toComplete;
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;vertical-align:top;">' + sanitize(actorsText) + '</td>';
+
+    // Alertes
+    var alertsHtml = '';
+    if (task.Due_Date && task.Status !== 'done' && task.Due_Date < now) {
+      alertsHtml = '<span style="color:#ef4444;font-weight:bold;">⚠ ' + (currentLang === 'fr' ? 'En retard' : 'Overdue') + '</span>';
+    }
+    if (!task.Due_Date && task.Status !== 'done') {
+      alertsHtml += (alertsHtml ? '<br>' : '') + '<span style="color:#f59e0b;">⚠ ' + (currentLang === 'fr' ? 'Pas de date' : 'No date') + '</span>';
+    }
+    if (!alertsHtml) alertsHtml = '<span style="color:#94a3b8;">' + sanitize(toComplete) + '</span>';
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;vertical-align:top;">' + alertsHtml + '</td>';
+
+    // Date
+    var dateText = '';
+    if (task.Status === 'done') {
+      var completionDate = task.Completion_Date || task.Due_Date;
+      dateText = completionDate ? formatDate(completionDate) : toComplete;
+    } else {
+      dateText = task.Due_Date ? formatDate(task.Due_Date) : toComplete;
+    }
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;white-space:nowrap;vertical-align:top;">' + sanitize(dateText) + '</td>';
+
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  return html;
 }
 
 function downloadSynthesisMarkdown() {
