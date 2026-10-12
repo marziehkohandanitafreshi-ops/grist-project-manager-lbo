@@ -4550,6 +4550,16 @@
           <option value="" data-i18n="synthesisSelectProject">Sélectionner un projet</option>
         </select>
         <button class="btn btn-primary" onclick="generateSynthesisMarkdown()" data-i18n="synthesisGenerate">Générer le Markdown</button>
+        <button class="btn btn-secondary" onclick="generateMermaidGantt()" data-i18n="synthesisGanttMermaid">📊 Gantt Mermaid</button>
+      </div>
+      <div id="synthesis-mermaid-output" style="display:none;margin-top:16px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+          <span style="font-size:13px;font-weight:600;color:#1e293b;" data-i18n="synthesisMermaidTitle">Diagramme de Gantt (Mermaid)</span>
+          <button class="btn btn-secondary btn-sm" onclick="copyMermaidGantt()">📋 <span data-i18n="synthesisCopy">Copier</span></button>
+          <button class="btn btn-secondary btn-sm" onclick="downloadMermaidGantt()">💾 <span data-i18n="synthesisDownloadMermaid">Télécharger .mmd</span></button>
+        </div>
+        <textarea id="synthesis-mermaid-code" readonly style="width:100%;height:400px;font-family:monospace;font-size:12px;border:1px solid #e2e8f0;border-radius:8px;padding:12px;resize:vertical;box-sizing:border-box;background:#f8fafc;"></textarea>
+      </div>
       </div>
       <div id="synthesis-output" style="display:none;">
         <div style="display:flex;gap:8px;margin-bottom:12px;">

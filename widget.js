@@ -203,6 +203,12 @@ var i18n = {
     synthesisPage: 'Page',
     synthesisPageOf: 'sur',
     synthesisTasksCount: 'tâches au total',
+    synthesisGanttMermaid: 'Gantt Mermaid',
+    synthesisMermaidTitle: 'Diagramme de Gantt (Mermaid)',
+    synthesisDownloadMermaid: 'Télécharger .mmd',
+    synthesisMermaidCopied: 'Code Mermaid copié !',
+    synthesisMermaidNoTasks: 'Aucune tâche avec des dates dans ce projet',
+    synthesisMermaidGenerated: 'Gantt Mermaid généré',
     teamUsersTitle: 'Utilisateurs',
     teamUsersSubtitle: 'Gérez les membres de votre équipe',
     manageRoles: 'Rôles',
@@ -584,6 +590,12 @@ var i18n = {
     synthesisPage: 'Page',
     synthesisPageOf: 'of',
     synthesisTasksCount: 'tasks total',
+    synthesisGanttMermaid: 'Gantt Mermaid',
+    synthesisMermaidTitle: 'Gantt Diagram (Mermaid)',
+    synthesisDownloadMermaid: 'Download .mmd',
+    synthesisMermaidCopied: 'Mermaid code copied!',
+    synthesisMermaidNoTasks: 'No tasks with dates in this project',
+    synthesisMermaidGenerated: 'Mermaid Gantt generated',
     teamUsersTitle: 'Users',
     teamUsersSubtitle: 'Manage your team members',
     manageRoles: 'Roles',
@@ -12141,4 +12153,210 @@ function downloadSynthesisMarkdown() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showToast(t('synthesisDownload') + ' ✓', 'success');
+}
+
+// =============================================================================
+// SYNTHESIS — Gantt Mermaid
+// =============================================================================
+
+// Convertit une date epoch (secondes) en format YYYY-MM-DD pour Mermaid
+function mermaidDate(epochSec) {
+  if (!epochSec) return null;
+  var d = new Date(epochSec * 1000);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().split('T')[0];
+}
+
+// Échappe les caractères spéciaux pour Mermaid (évite les problèmes de parsing)
+function mermaidEscape(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/:/g, '&#58;')   // deux-points
+    .replace(/,/g, '&#44;')   // virgule
+    .replace(/;/g, '&#59;')   // point-virgule
+    .replace(/\[/g, '&#91;')  // crochet ouvrant
+    .replace(/\]/g, '&#93;')  // crochet fermant
+    .replace(/\n/g, ' ');     // saut de ligne
+}
+
+// Génère le diagramme de Gantt au format Mermaid
+function generateMermaidGantt() {
+  var select = document.getElementById('synthesis-project-select');
+  var projectId = select ? parseInt(select.value) : null;
+  if (!projectId) {
+    showToast(t('synthesisNoProject'), 'error');
+    return;
+  }
+  var project = projects.find(function(p) { return p.id === projectId; });
+  if (!project) return;
+
+  // Filtrer les tâches du projet avec des dates
+  var projectTasks = tasks.filter(function(tk) {
+    return tk.Project_Id === projectId && (tk.Start_Date || tk.Due_Date);
+  });
+  if (projectTasks.length === 0) {
+    showToast(t('synthesisMermaidNoTasks'), 'info');
+    return;
+  }
+
+  // Trier par date de début
+  projectTasks.sort(function(a, b) {
+    var da = a.Start_Date || a.Due_Date || 0;
+    var db = b.Start_Date || b.Due_Date || 0;
+    return da - db;
+  });
+
+  // Construire le code Mermaid
+  var md = 'gantt\n';
+  md += '    title ' + mermaidEscape(project.Name) + '\n';
+  md += '    dateFormat YYYY-MM-DD\n';
+  md += '    axisFormat %d/%m/%Y\n';
+  md += '    todayMarker on\n';
+  md += '\n';
+
+  // Section pour les tâches parentes
+  md += '    section ' + mermaidEscape(currentLang === 'fr' ? 'Tâches' : 'Tasks') + '\n';
+
+  var taskIdMap = {}; // Map task.id -> mermaid id
+
+  projectTasks.forEach(function(task, idx) {
+    var mid = 't' + task.id;
+    taskIdMap[task.id] = mid;
+
+    var startDate = mermaidDate(task.Start_Date || task.Due_Date);
+    var endDate = mermaidDate(task.Due_Date || task.Start_Date);
+
+    // Construire la ligne de la tâche
+    var line = '    ' + mermaidEscape(task.Title);
+
+    // Dépendances : after t{depId}
+    var deps = getTaskDependencies(task.id);
+    var afterClause = '';
+    if (deps.length > 0) {
+      var depIds = deps.map(function(d) { return taskIdMap[d.id] || ('t' + d.id); }).filter(Boolean);
+      if (depIds.length > 0) {
+        afterClause = 'after ' + depIds.join(' ');
+      }
+    }
+
+    // Tags de statut
+    var statusTag = '';
+    if (task.Status === 'done') statusTag = 'done,';
+    else if (task.Status === 'progress') statusTag = 'active,';
+
+    if (startDate && endDate && startDate !== endDate) {
+      line += ' :' + statusTag + mid + ', ' + startDate + ', ' + endDate;
+    } else if (startDate) {
+      line += ' :' + statusTag + mid + ', ' + startDate + ', 1d';
+    } else {
+      line += ' :' + statusTag + mid + ', ' + endDate + ', 1d';
+    }
+
+    // Ajouter la dépendance après les dates (Mermaid accepte after avant ou après)
+    if (afterClause) {
+      // Reformater : mettre after avant les dates
+      line = '    ' + mermaidEscape(task.Title) + ' :' + statusTag + mid + ', ' + afterClause;
+      if (startDate && endDate && startDate !== endDate) {
+        line += ', ' + startDate + ', ' + endDate;
+      } else if (startDate) {
+        line += ', ' + startDate + ', 1d';
+      }
+    }
+
+    md += line + '\n';
+  });
+
+  // Sections pour les sous-tâches et jalons de chaque tâche
+  projectTasks.forEach(function(task) {
+    var taskSubtasks = getTaskSubtasks(task.id);
+    if (taskSubtasks.length === 0) return;
+
+    // Trier les sous-tâches : jalons d'abord, puis par date
+    var milestones = taskSubtasks.filter(function(st) { return isMilestone(st); });
+    var subtasksOnly = taskSubtasks.filter(function(st) { return !isMilestone(st); });
+
+    if (milestones.length === 0 && subtasksOnly.length === 0) return;
+
+    md += '\n';
+    md += '    section ' + mermaidEscape(task.Title) + '\n';
+
+    // Sous-tâches
+    subtasksOnly.forEach(function(st) {
+      var sid = 's' + st.id;
+      var stStart = mermaidDate(st.Start_Date || st.Due_Date);
+      var stEnd = mermaidDate(st.Due_Date || st.Start_Date);
+
+      var stLine = '    ↳ ' + mermaidEscape(st.Title);
+      var stStatusTag = st.Completed ? 'done,' : (st.Status === 'progress' ? 'active,' : '');
+
+      if (stStart && stEnd && stStart !== stEnd) {
+        stLine += ' :' + stStatusTag + sid + ', ' + stStart + ', ' + stEnd;
+      } else if (stStart) {
+        stLine += ' :' + stStatusTag + sid + ', ' + stStart + ', 1d';
+      } else if (stEnd) {
+        stLine += ' :' + stStatusTag + sid + ', ' + stEnd + ', 1d';
+      } else {
+        return; // Pas de date, ignorer
+      }
+      md += stLine + '\n';
+    });
+
+    // Jalons (milestones)
+    milestones.forEach(function(st) {
+      var mid = 'm' + st.id;
+      var mDate = mermaidDate(st.Due_Date || st.Start_Date);
+      if (!mDate) return;
+
+      var mLine = '    ◆ ' + mermaidEscape(st.Title) + ' :milestone,' + (st.Completed ? 'done,' : '') + mid + ', ' + mDate + ', 0d';
+      md += mLine + '\n';
+    });
+  });
+
+  // Afficher le résultat
+  var textarea = document.getElementById('synthesis-mermaid-code');
+  if (textarea) textarea.value = md;
+
+  var output = document.getElementById('synthesis-mermaid-output');
+  if (output) output.style.display = 'block';
+
+  showToast(t('synthesisMermaidGenerated') + ' ✓', 'success');
+}
+
+// Copie le code Mermaid dans le presse-papiers
+function copyMermaidGantt() {
+  var textarea = document.getElementById('synthesis-mermaid-code');
+  if (!textarea || !textarea.value) return;
+  textarea.select();
+  textarea.setSelectionRange(0, 99999);
+  try {
+    document.execCommand('copy');
+    showToast(t('synthesisMermaidCopied'), 'success');
+  } catch (e) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(textarea.value).then(function() {
+        showToast(t('synthesisMermaidCopied'), 'success');
+      });
+    }
+  }
+}
+
+// Télécharge le code Mermaid en fichier .mmd
+function downloadMermaidGantt() {
+  var textarea = document.getElementById('synthesis-mermaid-code');
+  if (!textarea || !textarea.value) return;
+  var select = document.getElementById('synthesis-project-select');
+  var projectId = select ? select.value : 'projet';
+  var project = projects.find(function(p) { return p.id === parseInt(projectId); });
+  var filename = 'gantt-' + (project ? project.Name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'projet') + '.mmd';
+
+  var blob = new Blob([textarea.value], { type: 'text/plain;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(t('synthesisDownloadMermaid') + ' ✓', 'success');
 }
