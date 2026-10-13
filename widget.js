@@ -2485,13 +2485,50 @@ async function cleanupEmptyDraftTasks() {
     tasks = tasks.filter(function (tk) { return ghosts.indexOf(tk) === -1; });
   } catch (e) { console.error('cleanupEmptyDraftTasks:', e); }
 }
+// Debounce des champs de recherche : évite de reconstruire la vue à chaque
+// frappe (la recherche globale, la vue tableau et les templates scannent
+// l'ensemble des données).
+function _debounce(fn, ms) {
+  var timer = null;
+  return function() {
+    var args = arguments;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(function() { fn.apply(null, args); }, ms || 200);
+  };
+}
+var tableSearchDebounced = _debounce(function() { renderTableView(); }, 200);
+var templateSearchDebounced = _debounce(function() { renderTemplatesView(); }, 200);
+var globalSearchDebounced = _debounce(function(v) { globalSearch(v); }, 200);
+
 
 async function loadAllData() {
   // Load column mapping first
   await loadColumnMapping();
+    // Performance : les 16 fetchTable sont lancés en parallèle dès maintenant.
+    // Chaque bloc ci-dessous attend sa propre promesse : la latence totale est
+    // celle de la table la plus lente au lieu de la somme des appels.
+    // Un fetch échoué se résout en null, le catch du bloc concerné réagit
+    // exactement comme si le fetch avait échoué sur place.
+    var _pTask  = grist.docApi.fetchTable(TASKS_TABLE).catch(function() { return null; });
+    var _pUser  = grist.docApi.fetchTable(USERS_TABLE).catch(function() { return null; });
+    var _pGroup = grist.docApi.fetchTable(GROUPS_TABLE).catch(function() { return null; });
+    var _pTpl   = grist.docApi.fetchTable(TEMPLATES_TABLE).catch(function() { return null; });
+    var _pSub   = grist.docApi.fetchTable(SUBTASKS_TABLE).catch(function() { return null; });
+    var _pDep   = grist.docApi.fetchTable(DEPENDENCIES_TABLE).catch(function() { return null; });
+    var _pCom   = grist.docApi.fetchTable(COMMENTS_TABLE).catch(function() { return null; });
+    var _pAtt   = grist.docApi.fetchTable(ATTACHMENTS_TABLE).catch(function() { return null; });
+    var _pTime  = grist.docApi.fetchTable(TIME_ENTRIES_TABLE).catch(function() { return null; });
+    var _pCf    = grist.docApi.fetchTable(CUSTOM_FIELDS_TABLE).catch(function() { return null; });
+    var _pCfv   = grist.docApi.fetchTable(CUSTOM_FIELD_VALUES_TABLE).catch(function() { return null; });
+    var _pCat   = grist.docApi.fetchTable(CATEGORIES_TABLE).catch(function() { return null; });
+    var _pTag   = grist.docApi.fetchTable(TAGS_TABLE).catch(function() { return null; });
+    var _pProj  = grist.docApi.fetchTable(PROJECTS_TABLE).catch(function() { return null; });
+    var _pNotif = grist.docApi.fetchTable(NOTIFICATIONS_TABLE).catch(function() { return null; });
+    var _pLog   = grist.docApi.fetchTable(ACTIVITY_LOG_TABLE).catch(function() { return null; });
+
   
   try {
-    var taskData = await grist.docApi.fetchTable(TASKS_TABLE);
+    var taskData = await _pTask;
     tasks = [];
     if (taskData && taskData.id) {
       for (var i = 0; i < taskData.id.length; i++) {
@@ -2545,7 +2582,7 @@ async function loadAllData() {
   }
 
   try {
-    var userData = await grist.docApi.fetchTable(USERS_TABLE);
+    var userData = await _pUser;
     users = [];
     if (userData && userData.id) {
       var nameCol = getColumnName('users', 'name');
@@ -2568,7 +2605,7 @@ async function loadAllData() {
   }
 
   try {
-    var groupData = await grist.docApi.fetchTable(GROUPS_TABLE);
+    var groupData = await _pGroup;
     groups = [];
     if (groupData && groupData.id) {
       for (var i = 0; i < groupData.id.length; i++) {
@@ -2584,7 +2621,7 @@ async function loadAllData() {
   }
 
   try {
-    var tplData = await grist.docApi.fetchTable(TEMPLATES_TABLE);
+    var tplData = await _pTpl;
     templates = [];
     if (tplData && tplData.id) {
       for (var i = 0; i < tplData.id.length; i++) {
@@ -2608,7 +2645,7 @@ async function loadAllData() {
   }
 
   try {
-    var subtaskData = await grist.docApi.fetchTable(SUBTASKS_TABLE);
+    var subtaskData = await _pSub;
     subtasks = [];
     if (subtaskData && subtaskData.id) {
       for (var i = 0; i < subtaskData.id.length; i++) {
@@ -2652,7 +2689,7 @@ async function loadAllData() {
   }
 
   try {
-    var depData = await grist.docApi.fetchTable(DEPENDENCIES_TABLE);
+    var depData = await _pDep;
     dependencies = [];
     if (depData && depData.id) {
       for (var i = 0; i < depData.id.length; i++) {
@@ -2669,7 +2706,7 @@ async function loadAllData() {
   }
 
   try {
-    var commentData = await grist.docApi.fetchTable(COMMENTS_TABLE);
+    var commentData = await _pCom;
     comments = [];
     if (commentData && commentData.id) {
       for (var i = 0; i < commentData.id.length; i++) {
@@ -2687,7 +2724,7 @@ async function loadAllData() {
   }
 
   try {
-    var attData = await grist.docApi.fetchTable(ATTACHMENTS_TABLE);
+    var attData = await _pAtt;
     attachments = [];
     if (attData && attData.id) {
       for (var i = 0; i < attData.id.length; i++) {
@@ -2708,7 +2745,7 @@ async function loadAllData() {
   }
 
   try {
-    var timeData = await grist.docApi.fetchTable(TIME_ENTRIES_TABLE);
+    var timeData = await _pTime;
     timeEntries = [];
     if (timeData && timeData.id) {
       for (var i = 0; i < timeData.id.length; i++) {
@@ -2730,7 +2767,7 @@ async function loadAllData() {
   await loadWorkloadEntries();
 
   try {
-    var cfData = await grist.docApi.fetchTable(CUSTOM_FIELDS_TABLE);
+    var cfData = await _pCf;
     customFields = [];
     if (cfData && cfData.id) {
       for (var i = 0; i < cfData.id.length; i++) {
@@ -2750,7 +2787,7 @@ async function loadAllData() {
   }
 
   try {
-    var cfvData = await grist.docApi.fetchTable(CUSTOM_FIELD_VALUES_TABLE);
+    var cfvData = await _pCfv;
     customFieldValues = [];
     if (cfvData && cfvData.id) {
       for (var i = 0; i < cfvData.id.length; i++) {
@@ -2767,7 +2804,7 @@ async function loadAllData() {
   }
 
   try {
-    var catData = await grist.docApi.fetchTable(CATEGORIES_TABLE);
+    var catData = await _pCat;
     categories = [];
     if (catData && catData.id) {
       var nameCol = getColumnName('categories', 'name');
@@ -2789,7 +2826,7 @@ async function loadAllData() {
   }
 
   try {
-    var tagData = await grist.docApi.fetchTable(TAGS_TABLE);
+    var tagData = await _pTag;
     tags = [];
     if (tagData && tagData.id) {
       var nameCol = getColumnName('tags', 'name');
@@ -2808,7 +2845,7 @@ async function loadAllData() {
   }
 
   try {
-    var projData = await grist.docApi.fetchTable(PROJECTS_TABLE);
+    var projData = await _pProj;
     projects = [];
     if (projData && projData.id) {
       var nameCol = getColumnName('projects', 'name');
@@ -2836,7 +2873,7 @@ async function loadAllData() {
   }
 
   try {
-    var notifData = await grist.docApi.fetchTable(NOTIFICATIONS_TABLE);
+    var notifData = await _pNotif;
     pmNotifications = [];
     if (notifData && notifData.id) {
       for (var ni = 0; ni < notifData.id.length; ni++) {
@@ -2857,7 +2894,7 @@ async function loadAllData() {
   }
 
   try {
-    var logData = await grist.docApi.fetchTable(ACTIVITY_LOG_TABLE);
+    var logData = await _pLog;
     activityLog = [];
     if (logData && logData.id) {
       for (var ai = 0; ai < logData.id.length; ai++) {
@@ -11732,7 +11769,13 @@ if (!isInsideGrist()) {
         _liveReloadTimer = setTimeout(function() {
           var modal = document.getElementById('modal-container');
           if (modal && modal.innerHTML.trim() !== '') return;
-          loadAllData();
+          loadAllData().then(function() {
+            // Purge des vieilles notifications après un rechargement : elles sont
+            // intégralement rechargées à chaque fois et ralentissent le fetch
+            // au fil des mois si elles s'accumulent (le nettoyage ne tournait
+            // qu'au démarrage du widget).
+            cleanupOldNotifications();
+          });
         }, 500);
       });
     }
