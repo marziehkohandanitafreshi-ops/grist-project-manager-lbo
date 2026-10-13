@@ -4719,8 +4719,8 @@ function renderTableView() {
       // DoD : lignes au niveau en dessous de la sous-tâche, pliables/dépliables
       for (var sdi = 0; sdi < stDodShown.length; sdi++) {
         var sd = stDodShown[sdi].d;
-        html += '<tr class="dod-row" data-parent="' + task.id + '" data-st-parent="' + st.id + '" style="display:none;">';
-        html += '<td><div class="dod-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="dod-checkbox" ' + (sd.done ? 'checked' : '') + ' onchange="toggleDoD(' + st.id + ', ' + stDodShown[sdi].di + ', this.checked)" style="cursor:pointer;width:14px;height:14px;flex-shrink:0;" />';
+        html += '<tr class="dod-row clickable-row" data-parent="' + task.id + '" data-st-parent="' + st.id + '" style="display:none;cursor:pointer;" onclick="openEditTaskModal(' + task.id + ', true); setTimeout(function(){startEditSubtask(' + st.id + ')},100);">';
+        html += '<td><div class="dod-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="dod-checkbox" ' + (sd.done ? 'checked' : '') + ' onclick="event.stopPropagation();" onchange="toggleDoD(' + st.id + ', ' + stDodShown[sdi].di + ', this.checked)" style="cursor:pointer;width:14px;height:14px;flex-shrink:0;" />';
         html += '<span class="dod-text' + (sd.done ? ' dod-text-done' : '') + '">' + sanitize(sd.text || '') + '</span>';
         html += '</div></td>';
         html += '<td></td><td></td><td></td><td></td><td>' + (sd.assignee ? '<span class="assignee-chip">👤 ' + sanitize(sd.assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ')) + '</span>' : '') + '</td><td></td><td></td><td></td>';
