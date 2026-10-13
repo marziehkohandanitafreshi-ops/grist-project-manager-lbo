@@ -12462,6 +12462,16 @@ async function copyMermaidGanttAsImage() {
     var renderResult = await mermaid.render(renderId, textarea.value);
     container.innerHTML = renderResult.svg;
 
+    // Agrandir les dates de l'axe temporel (elles sont petites par défaut
+    // et la config mermaid n'expose pas leur taille)
+    var svgEl = container.querySelector('svg');
+    if (svgEl) {
+      var axisTexts = svgEl.querySelectorAll('.grid text, .tick text');
+      for (var at = 0; at < axisTexts.length; at++) {
+        axisTexts[at].style.setProperty('font-size', '20px', 'important');
+      }
+    }
+
     // Capturer avec html2canvas
     var canvas = await html2canvas(container, {
       backgroundColor: '#ffffff',
