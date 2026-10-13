@@ -11769,6 +11769,34 @@ function getSubtaskStatusIcon(st) {
   return '⬜';
 }
 
+// Acteurs d'une tâche pour le tableau de pilotage : responsables de la tâche,
+// de ses sous-tâches et de ses critères DoD, avec le rôle de chacun.
+// Une personne qui apparaît plusieurs fois n'est listée qu'une seule fois.
+function getSynthesisTaskActors(task) {
+  var seen = {};
+  var actors = [];
+  function push(identStr) {
+    String(identStr || '').split(',').forEach(function(part) {
+      var s = part.trim();
+      if (!s) return;
+      var u = findUserByIdent(s);
+      var key = u ? String(u.Email || u.Name).toLowerCase().trim() : s.toLowerCase();
+      if (seen[key]) return;
+      seen[key] = true;
+      actors.push({
+        name: (u && u.Name) ? u.Name : getUserDisplayName(s),
+        role: u ? userRoleDisplay(u) : ''
+      });
+    });
+  }
+  push(task.Assignee);
+  getTaskSubtasks(task.id).forEach(function(st) {
+    push(st.Assignee);
+    getDoD(st).forEach(function(d) { push(d.assignee); });
+  });
+  return actors;
+}
+
 
 // Pagination PPT : 3 tâches par page
 var synthesisCurrentPage = 1;
@@ -11883,7 +11911,16 @@ function generateSynthesisMarkdown() {
     // Colonnes à compléter
     var prereqTech = toComplete;
     var prereqUser = toComplete;
-    var actors = task.Assignee ? task.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : toComplete;
+    // Acteurs : responsables de la tâche, de ses sous-tâches et de ses DoD,
+    // avec leur rôle, une seule occurrence par personne
+    var taskActors = getSynthesisTaskActors(task);
+    var actors = taskActors.length > 0
+      ? taskActors.map(function(a) {
+          var label = sanitize(a.name);
+          if (a.role) label += ' — ' + sanitize(a.role);
+          return label;
+        }).join('<br>')
+      : toComplete;
     var alerts = '';
 
     // Alertes : tâche en retard
