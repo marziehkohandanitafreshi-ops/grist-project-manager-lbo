@@ -180,6 +180,43 @@ var i18n = {
     mostUsed: 'Plus utilisé',
     categories: 'Produits',
     tabTeam: 'Équipe',
+    tabSynthesis: 'Synthèse',
+    synthesisSubtitle: 'Générez un tableau de pilotage détaillé par projet au format Markdown',
+    synthesisSelectProject: 'Sélectionner un projet',
+    synthesisGenerate: 'Générer le Markdown',
+    synthesisCopy: 'Copier',
+    synthesisDownload: 'Télécharger .md',
+    synthesisCopied: 'Markdown copié dans le presse-papiers !',
+    synthesisNoProject: 'Veuillez sélectionner un projet',
+    synthesisNoTasks: 'Aucune tâche dans ce projet',
+    synthesisPhase: 'Phase',
+    synthesisStatus: 'Statut',
+    synthesisProgress: '%',
+    synthesisActions: 'Actions clés',
+    synthesisPrereq: 'Prérequis',
+    synthesisPrereqUser: 'Prérequis utilisateurs',
+    synthesisActors: 'Acteurs',
+    synthesisAlerts: 'Alertes',
+    synthesisDate: "Date d'échéance/réalisation",
+    synthesisToComplete: 'À compléter',
+    synthesisPreview: 'Aperçu',
+    synthesisCopyPPT: 'Copier pour PPT',
+    synthesisCopiedPPT: 'Tableau copié — collez dans PowerPoint !',
+    synthesisCopyPPTError: 'Copie PPT indisponible, utilisez le bouton Copier',
+    synthesisPagination: 'Pagination PPT (3 tâches/page) :',
+    synthesisPage: 'Page',
+    synthesisPageOf: 'sur',
+    synthesisTasksCount: 'tâches au total',
+    synthesisGanttMermaid: 'Gantt Mermaid',
+    synthesisMermaidTitle: 'Diagramme de Gantt (Mermaid)',
+    synthesisDownloadMermaid: 'Télécharger .mmd',
+    synthesisMermaidCopied: 'Code Mermaid copié !',
+    synthesisMermaidNoTasks: 'Aucune tâche avec des dates dans ce projet',
+    synthesisMermaidGenerated: 'Gantt Mermaid généré',
+    synthesisCopyImage: 'Copier image',
+    synthesisImageCopied: 'Image Gantt copiée — collez dans PowerPoint !',
+    synthesisImageError: 'Erreur génération image, réessayez',
+    synthesisImageGenerating: 'Génération de l\'image en cours...',
     teamUsersTitle: 'Utilisateurs',
     teamUsersSubtitle: 'Gérez les membres de votre équipe',
     manageRoles: 'Rôles',
@@ -538,6 +575,43 @@ var i18n = {
     mostUsed: 'Most used',
     categories: 'Products',
     tabTeam: 'Team',
+    tabSynthesis: 'Synthesis',
+    synthesisSubtitle: 'Generate a detailed project dashboard in Markdown format',
+    synthesisSelectProject: 'Select a project',
+    synthesisGenerate: 'Generate Markdown',
+    synthesisCopy: 'Copy',
+    synthesisDownload: 'Download .md',
+    synthesisCopied: 'Markdown copied to clipboard!',
+    synthesisNoProject: 'Please select a project',
+    synthesisNoTasks: 'No tasks in this project',
+    synthesisPhase: 'Phase',
+    synthesisStatus: 'Status',
+    synthesisProgress: '%',
+    synthesisActions: 'Key actions',
+    synthesisPrereq: 'Prerequisites',
+    synthesisPrereqUser: 'User prerequisites',
+    synthesisActors: 'Actors',
+    synthesisAlerts: 'Alerts',
+    synthesisDate: 'Due/Completion date',
+    synthesisToComplete: 'To complete',
+    synthesisPreview: 'Preview',
+    synthesisCopyPPT: 'Copy for PPT',
+    synthesisCopiedPPT: 'Table copied — paste into PowerPoint!',
+    synthesisCopyPPTError: 'PPT copy unavailable, use the Copy button',
+    synthesisPagination: 'PPT pagination (3 tasks/page):',
+    synthesisPage: 'Page',
+    synthesisPageOf: 'of',
+    synthesisTasksCount: 'tasks total',
+    synthesisGanttMermaid: 'Gantt Mermaid',
+    synthesisMermaidTitle: 'Gantt Diagram (Mermaid)',
+    synthesisDownloadMermaid: 'Download .mmd',
+    synthesisMermaidCopied: 'Mermaid code copied!',
+    synthesisMermaidNoTasks: 'No tasks with dates in this project',
+    synthesisMermaidGenerated: 'Mermaid Gantt generated',
+    synthesisCopyImage: 'Copy image',
+    synthesisImageCopied: 'Gantt image copied — paste into PowerPoint!',
+    synthesisImageError: 'Image generation error, please retry',
+    synthesisImageGenerating: 'Generating image...',
     teamUsersTitle: 'Users',
     teamUsersSubtitle: 'Manage your team members',
     manageRoles: 'Roles',
@@ -1896,11 +1970,16 @@ function switchTab(tabId) {
   if (tabId === 'stats') renderStatsView();
   if (tabId === 'team') renderTeamView();
   if (tabId === 'settings') renderSettingsView();
+  if (tabId === 'synthesis') renderSynthesisView();
 }
-
 function restoreActiveTab() {
   var savedTab = localStorage.getItem('pm-active-tab');
   if (savedTab) {
+    // Si l'onglet sauvegardé n'est pas visible (non autorisé ou caché par défaut), basculer vers Kanban
+    if (typeof isTabVisible === 'function' && !isTabVisible(savedTab)) {
+      switchTab('kanban');
+      return;
+    }
     switchTab(savedTab);
   }
 }
@@ -3430,9 +3509,10 @@ function refreshAllViews() {
     if (tab === 'templates') renderTemplatesView();
     if (tab === 'stats') renderStatsView();
     if (tab === 'team') renderTeamView();
+    if (tab === 'settings') renderSettingsView();
+    if (tab === 'synthesis') renderSynthesisView();
   }
 }
-
 // =============================================================================
 // CALENDAR VIEW
 // =============================================================================
@@ -9109,6 +9189,7 @@ var WIDGET_TABS = [
   { id: 'templates', label_fr: 'Templates',    label_en: 'Templates',  ownerOnly: true },
   { id: 'stats',     label_fr: 'Stats',        label_en: 'Stats',      ownerOnly: true },
   { id: 'team',      label_fr: 'Équipe',       label_en: 'Team',       ownerOnly: true },
+  { id: 'synthesis', label_fr: 'Synthèse',    label_en: 'Synthesis',  ownerOnly: true },
   { id: 'settings',  label_fr: 'Paramètres',   label_en: 'Settings',   ownerOnly: true }
 ];
 
@@ -9165,20 +9246,58 @@ async function loadWidgetPermissions() {
 function isTabAllowed(tabId) {
   if (userAllowedTabs.length > 0) return userAllowedTabs.indexOf(tabId) !== -1;
   if (isOwner) return true;
-  var ownerTabs = ['team', 'templates', 'stats', 'settings'];
+  var ownerTabs = ['team', 'templates', 'stats', 'settings', 'synthesis'];
   return ownerTabs.indexOf(tabId) === -1;
 }
 
-function applyOwnerRestrictions() {
-  var allTabs = ['calendar', 'kanban', 'table', 'gantt', 'templates', 'stats', 'team', 'settings'];
+// Onglets masqués par défaut — accessibles via le bouton (+) dans la barre d'onglets
+var HIDDEN_TABS_BY_DEFAULT = ['calendar', 'templates', 'team'];
+
+function areHiddenTabsShown() {
+  return localStorage.getItem('pm-show-hidden-tabs') === 'true';
+}
+
+function toggleHiddenTabs() {
+  var show = !areHiddenTabsShown();
+  localStorage.setItem('pm-show-hidden-tabs', show ? 'true' : 'false');
+  applyTabVisibility();
+}
+
+function isTabVisible(tabId) {
+  if (!isTabAllowed(tabId)) return false;
+  if (HIDDEN_TABS_BY_DEFAULT.indexOf(tabId) !== -1 && !areHiddenTabsShown()) return false;
+  return true;
+}
+
+function applyTabVisibility() {
+  var allTabs = ['calendar', 'kanban', 'table', 'gantt', 'templates', 'stats', 'team', 'settings', 'synthesis'];
   allTabs.forEach(function(tab) {
     var el = document.querySelector('[data-tab="' + tab + '"]');
-    if (el) el.style.display = isTabAllowed(tab) ? '' : 'none';
+    if (el) el.style.display = isTabVisible(tab) ? '' : 'none';
   });
+  updateHiddenTabsButton();
+  // Si l'onglet actif est masqué, basculer vers Kanban
   var activeBtn = document.querySelector('.tab-btn.active');
-  if (activeBtn && !isTabAllowed(activeBtn.getAttribute('data-tab'))) {
-    switchTab('calendar');
+  if (activeBtn && !isTabVisible(activeBtn.getAttribute('data-tab'))) {
+    switchTab('kanban');
   }
+}
+
+function updateHiddenTabsButton() {
+  var btn = document.getElementById('toggle-hidden-tabs-btn');
+  if (!btn) return;
+  var showHidden = areHiddenTabsShown();
+  btn.textContent = showHidden ? '\u2212' : '+';
+  btn.title = showHidden
+    ? (currentLang === 'fr' ? 'Masquer les onglets supplémentaires' : 'Hide extra tabs')
+    : (currentLang === 'fr' ? 'Afficher plus d\'onglets' : 'Show more tabs');
+  // Masquer le bouton s'il n'y a aucun onglet caché autorisé
+  var hasHiddenAllowed = HIDDEN_TABS_BY_DEFAULT.some(function(tab) { return isTabAllowed(tab); });
+  btn.style.display = hasHiddenAllowed ? '' : 'none';
+}
+
+function applyOwnerRestrictions() {
+  applyTabVisibility();
 }
 
 // =============================================================================
@@ -11690,4 +11809,688 @@ if (!isInsideGrist()) {
       });
     }
   })();
+}
+
+// =============================================================================
+// SYNTHESIS VIEW — Génération de tableau de pilotage Markdown par projet
+// =============================================================================
+
+function renderSynthesisView() {
+  var select = document.getElementById('synthesis-project-select');
+  if (!select) return;
+  // Peupler le sélecteur de projets
+  var html = '<option value="">' + t('synthesisSelectProject') + '</option>';
+  projects.forEach(function(p) {
+    if (p.Status === 'archived') return;
+    var taskCount = tasks.filter(function(tk) { return tk.Project_Id === p.id; }).length;
+    html += '<option value="' + p.id + '">' + sanitize(p.Name) + ' (' + taskCount + ' ' + (currentLang === 'fr' ? 'tâches' : 'tasks') + ')</option>';
+  });
+  select.innerHTML = html;
+  // Masquer la sortie si on change de vue
+  var output = document.getElementById('synthesis-output');
+  if (output) output.style.display = 'none';
+}
+
+function getStatusIcon(status) {
+  switch (status) {
+    case 'done': return '✅';
+    case 'progress': return '🟡';
+    case 'todo': return '⚪';
+    case 'archived': return '📦';
+    default: return '⚪';
+  }
+}
+
+function getSubtaskStatusIcon(st) {
+  if (st.Completed) return '✅';
+  var status = st.Status || 'todo';
+  if (status === 'done') return '✅';
+  if (status === 'progress') return '🔄';
+  return '⬜';
+}
+
+
+// Pagination PPT : 3 tâches par page
+var synthesisCurrentPage = 1;
+var synthesisTasksPerPage = 3;
+var synthesisTotalPages = 1;
+var synthesisProjectTasks = [];
+
+// Retourne les tâches de la page courante
+function getSynthesisPageTasks() {
+  var start = (synthesisCurrentPage - 1) * synthesisTasksPerPage;
+  return synthesisProjectTasks.slice(start, start + synthesisTasksPerPage);
+}
+
+// Met à jour l'affichage de la pagination
+function updateSynthesisPagination() {
+  var info = document.getElementById('synthesis-page-info');
+  var tasksSpan = document.getElementById('synthesis-page-tasks');
+  var prevBtn = document.getElementById('synthesis-page-prev');
+  var nextBtn = document.getElementById('synthesis-page-next');
+  if (!info) return;
+  info.textContent = t('synthesisPage') + ' ' + synthesisCurrentPage + ' ' + t('synthesisPageOf') + ' ' + synthesisTotalPages;
+  if (tasksSpan) tasksSpan.textContent = '(' + synthesisProjectTasks.length + ' ' + t('synthesisTasksCount') + ')';
+  if (prevBtn) prevBtn.disabled = synthesisCurrentPage <= 1;
+  if (nextBtn) nextBtn.disabled = synthesisCurrentPage >= synthesisTotalPages;
+  // Mettre à jour l'aperçu PPT avec la page courante
+  updateSynthesisPPTPreview();
+}
+
+// Navigation entre les pages (-1 = précédent, 1 = suivant)
+function synthesisGoToPage(direction) {
+  var newPage = synthesisCurrentPage + direction;
+  if (newPage < 1 || newPage > synthesisTotalPages) return;
+  synthesisCurrentPage = newPage;
+  updateSynthesisPagination();
+}
+
+// Met à jour l'aperçu avec le HTML de la page courante
+function updateSynthesisPPTPreview() {
+  var preview = document.getElementById('synthesis-preview');
+  if (!preview) return;
+  // Générer le HTML de la page courante et l'afficher dans l'aperçu
+  var htmlContent = buildPPTTableHTML(synthesisCurrentPage);
+  // Extraire juste le tableau pour l'aperçu (sans le wrapper div)
+  preview.innerHTML = htmlContent;
+}
+
+function generateSynthesisMarkdown() {
+  var select = document.getElementById('synthesis-project-select');
+  var projectId = select ? parseInt(select.value) : null;
+  if (!projectId) {
+    showToast(t('synthesisNoProject'), 'error');
+    return;
+  }
+  var project = projects.find(function(p) { return p.id === projectId; });
+  if (!project) return;
+
+  // Filtrer les tâches du projet
+  var projectTasks = tasks.filter(function(tk) { return tk.Project_Id === projectId; });
+  if (projectTasks.length === 0) {
+    showToast(t('synthesisNoTasks'), 'info');
+    return;
+  }
+
+  // Trier les tâches par date de début ou ordre de création
+  projectTasks.sort(function(a, b) {
+    var da = a.Start_Date || a.Created_At || 0;
+    var db = b.Start_Date || b.Created_At || 0;
+    return da - db;
+  });
+
+
+  // Initialiser la pagination PPT
+  synthesisProjectTasks = projectTasks;
+  synthesisTotalPages = Math.ceil(projectTasks.length / synthesisTasksPerPage);
+  synthesisCurrentPage = 1;
+
+  var toComplete = t('synthesisToComplete');
+  var now = Math.floor(Date.now() / 1000);
+
+  // Construire le tableau Markdown
+  var md = '# ' + (currentLang === 'fr' ? 'Tableau de Pilotage Détaillé' : 'Detailed Project Dashboard') + ' — ' + project.Name + '\n\n';
+  if (project.Description) md += '> ' + project.Description + '\n\n';
+  md += '| ' + t('synthesisPhase') + ' | ' + t('synthesisProgress') + ' | ' + t('synthesisActions') + ' | ' + t('synthesisPrereq') + ' | ' + t('synthesisActors') + ' | ' + t('synthesisAlerts') + ' | ' + t('synthesisDate') + ' |\n';
+  md += '|-------|---|-------------|------------|---------|---------|------------------------------|\n';
+
+  projectTasks.forEach(function(task) {
+    // Phase = nom de la tâche
+    var phase = sanitize(task.Title).replace(/\|/g, '\|');
+
+    // Statut avec icône
+    var statusIcon = getStatusIcon(task.Status);
+    var statusText = statusLabel(task.Status);
+    var status = statusIcon + ' ' + statusText;
+
+    // Pourcentage d'avancement
+    var progress = getTaskProgress(task);
+    var progressText = progress + '%';
+
+    // Actions clés = sous-tâches en bullet points avec icône de statut
+    var taskSubtasks = getTaskSubtasks(task.id);
+    var actions = '';
+    if (taskSubtasks.length > 0) {
+      actions = taskSubtasks.map(function(st) {
+        var icon = getSubtaskStatusIcon(st);
+        var title = sanitize(st.Title).replace(/\|/g, '\|');
+        return '• ' + title + ' ' + icon;
+      }).join('<br>');
+    } else {
+      actions = toComplete;
+    }
+
+    // Colonnes à compléter
+    var prereqTech = toComplete;
+    var prereqUser = toComplete;
+    var actors = task.Assignee ? task.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : toComplete;
+    var alerts = '';
+
+    // Alertes : tâche en retard
+    if (task.Due_Date && task.Status !== 'done' && task.Due_Date < now) {
+      alerts = '⚠️ ' + (currentLang === 'fr' ? 'En retard' : 'Overdue');
+    }
+    // Alertes : tâche sans date
+    if (!task.Due_Date && task.Status !== 'done') {
+      alerts = (alerts ? alerts + '<br>' : '') + '⚠️ ' + (currentLang === 'fr' ? 'Pas de date' : 'No date');
+    }
+    if (!alerts) alerts = toComplete;
+
+    // Date d'échéance/réalisation
+    var dateText = '';
+    if (task.Status === 'done') {
+      // Date de réalisation : utiliser la date de complétion si disponible, sinon la date d'échéance
+      var completionDate = task.Completion_Date || task.Due_Date;
+      dateText = completionDate ? formatDate(completionDate) : toComplete;
+    } else {
+      dateText = task.Due_Date ? formatDate(task.Due_Date) : toComplete;
+    }
+
+    md += '| ' + phase + ' | ' + progressText + ' | ' + actions + ' | ' + prereqTech + ' | ' + actors + ' | ' + alerts + ' | ' + dateText + ' |\n';
+  });
+
+  // Afficher le markdown
+  var textarea = document.getElementById('synthesis-markdown');
+  if (textarea) textarea.value = md;
+
+  // Afficher l'aperçu
+  var preview = document.getElementById('synthesis-preview');
+  if (preview) preview.innerHTML = renderMarkdownPreview(md);
+
+  // Afficher la section de sortie
+  var output = document.getElementById('synthesis-output');
+  if (output) output.style.display = 'block';
+
+  // Mettre à jour la pagination PPT
+  updateSynthesisPagination();
+
+  showToast(t('synthesisGenerate') + ' ✓', 'success');
+}
+
+// Aperçu HTML simple du markdown (tableau uniquement)
+function renderMarkdownPreview(md) {
+  var lines = md.split('\n');
+  var html = '';
+  var inTable = false;
+  var isHeader = false;
+
+  lines.forEach(function(line) {
+    line = line.trim();
+    if (line.startsWith('# ')) {
+      html += '<h1 style="font-size:18px;font-weight:700;margin-bottom:12px;">' + sanitize(line.substring(2)) + '</h1>';
+    } else if (line.startsWith('> ')) {
+      html += '<p style="color:#64748b;font-style:italic;margin-bottom:12px;">' + sanitize(line.substring(2)) + '</p>';
+    } else if (line.startsWith('|')) {
+      if (!inTable) {
+        html += '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead>';
+        inTable = true;
+        isHeader = true;
+      }
+      var cells = line.split('|').filter(function(c, i, arr) { return i > 0 && i < arr.length - 1; });
+      var tag = isHeader ? 'th' : 'td';
+      var style = isHeader
+        ? 'padding:8px;border:1px solid #e2e8f0;background:#3b82f6;color:white;font-weight:600;text-align:left;'
+        : 'padding:8px;border:1px solid #e2e8f0;vertical-align:top;';
+      html += '<tr>';
+      cells.forEach(function(cell) {
+        var content = cell.trim().replace(/<br>/g, '<br>');
+        html += '<' + tag + ' style="' + style + '">' + content + '</' + tag + '>';
+      });
+      html += '</tr>';
+      isHeader = false;
+      // Détecter la fin du tableau (ligne de séparation)
+      if (line.indexOf('---') !== -1) {
+        html += '</thead><tbody>';
+      }
+    } else if (inTable && line === '') {
+      html += '</tbody></table>';
+      inTable = false;
+    }
+  });
+  if (inTable) html += '</tbody></table>';
+  return html;
+}
+
+function copySynthesisMarkdown() {
+  var textarea = document.getElementById('synthesis-markdown');
+  if (!textarea || !textarea.value) return;
+  textarea.select();
+  textarea.setSelectionRange(0, 99999);
+  try {
+    document.execCommand('copy');
+    showToast(t('synthesisCopied'), 'success');
+  } catch (e) {
+    // Fallback: utiliser l'API Clipboard si disponible
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(textarea.value).then(function() {
+        showToast(t('synthesisCopied'), 'success');
+      });
+    }
+  }
+}
+
+// Copie le tableau en HTML formaté pour PowerPoint (tableau éditable)
+function copySynthesisForPPT() {
+  var preview = document.getElementById('synthesis-preview');
+  var textarea = document.getElementById('synthesis-markdown');
+  if (!preview || !textarea || !textarea.value) return;
+
+  // Construire un HTML propre pour Office (tableau avec styles inline)
+  var htmlContent = buildPPTTableHTML();
+
+  // Méthode 1 : API Clipboard moderne (text/html)
+  if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+    try {
+      var item = new ClipboardItem({
+        'text/html': new Blob([htmlContent], { type: 'text/html' }),
+        'text/plain': new Blob([textarea.value], { type: 'text/plain' })
+      });
+      navigator.clipboard.write([item]).then(function() {
+        showToast(t('synthesisCopiedPPT'), 'success');
+      }).catch(function(err) {
+        console.warn('Clipboard API failed:', err);
+        fallbackCopyPPT(preview);
+      });
+      return;
+    } catch (e) {
+      console.warn('ClipboardItem failed:', e);
+    }
+  }
+
+  // Méthode 2 : Fallback — sélectionner le preview et execCommand('copy')
+  fallbackCopyPPT(preview);
+}
+
+// Fallback : sélectionne le contenu HTML du preview et copie
+function fallbackCopyPPT(previewEl) {
+  var range = document.createRange();
+  range.selectNodeContents(previewEl);
+  var selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+  try {
+    var success = document.execCommand('copy');
+    if (success) {
+      showToast(t('synthesisCopiedPPT'), 'success');
+    } else {
+      showToast(t('synthesisCopyPPTError'), 'error');
+    }
+  } catch (e) {
+    showToast(t('synthesisCopyPPTError'), 'error');
+  }
+  selection.removeAllRanges();
+}
+
+// Génère un HTML de tableau optimisé pour PowerPoint (styles inline, pas de classes CSS)
+function buildPPTTableHTML(pageNum) {
+  pageNum = pageNum || synthesisCurrentPage;
+  var select = document.getElementById('synthesis-project-select');
+  var projectId = select ? parseInt(select.value) : null;
+  var project = projects.find(function(p) { return p.id === projectId; });
+  var projectName = project ? project.Name : 'Projet';
+
+  // Utiliser les tâches déjà filtrées/triées (stockées globalement)
+  var allTasks = synthesisProjectTasks.length > 0 ? synthesisProjectTasks : tasks.filter(function(tk) { return tk.Project_Id === projectId; });
+  // Paginer : 3 tâches par page
+  var start = (pageNum - 1) * synthesisTasksPerPage;
+  var projectTasks = allTasks.slice(start, start + synthesisTasksPerPage);
+
+  var toComplete = t('synthesisToComplete');
+  var now = Math.floor(Date.now() / 1000);
+
+  var html = '';
+  html += '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:9pt;font-family:Calibri,Arial,sans-serif;">';
+
+  // En-tête
+  html += '<thead><tr style="background-color:#3b82f6;color:#ffffff;font-weight:bold;">';
+  var headers = [
+    t('synthesisPhase'), t('synthesisProgress'),
+    t('synthesisActions'), t('synthesisPrereq'),
+    t('synthesisActors'), t('synthesisAlerts'), t('synthesisDate')
+  ];
+  headers.forEach(function(h) {
+    html += '<th style="border:1px solid #cbd5e1;padding:6px 8px;text-align:left;white-space:nowrap;">' + sanitize(h) + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+  // Lignes
+  projectTasks.forEach(function(task, idx) {
+    var bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+    html += '<tr style="background-color:' + bgColor + ';">';
+
+    // Phase
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;font-weight:bold;vertical-align:top;">' + sanitize(task.Title) + '</td>';
+
+
+    // %
+    var progress = getTaskProgress(task);
+    var progressColor = progress === 100 ? '#22c55e' : (progress >= 50 ? '#3b82f6' : '#f59e0b');
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;text-align:center;vertical-align:top;">' +
+      '<span style="color:' + progressColor + ';font-weight:bold;">' + progress + '%</span></td>';
+
+    // Actions clés (sous-tâches)
+    var taskSubtasks = getTaskSubtasks(task.id);
+    var actionsHtml = '';
+    if (taskSubtasks.length > 0) {
+      actionsHtml = taskSubtasks.map(function(st) {
+        var icon = getSubtaskStatusIcon(st);
+        return icon + ' ' + sanitize(st.Title);
+      }).join('<br>');
+    } else {
+      actionsHtml = '<span style="color:#94a3b8;">' + sanitize(toComplete) + '</span>';
+    }
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;vertical-align:top;">' + actionsHtml + '</td>';
+
+    // Prérequis (à compléter)
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;color:#94a3b8;vertical-align:top;">' + sanitize(toComplete) + '</td>';
+
+    // Acteurs
+    var actorsText = task.Assignee ? task.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : toComplete;
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;vertical-align:top;">' + sanitize(actorsText) + '</td>';
+
+    // Alertes
+    var alertsHtml = '';
+    if (task.Due_Date && task.Status !== 'done' && task.Due_Date < now) {
+      alertsHtml = '<span style="color:#ef4444;font-weight:bold;">⚠ ' + (currentLang === 'fr' ? 'En retard' : 'Overdue') + '</span>';
+    }
+    if (!task.Due_Date && task.Status !== 'done') {
+      alertsHtml += (alertsHtml ? '<br>' : '') + '<span style="color:#f59e0b;">⚠ ' + (currentLang === 'fr' ? 'Pas de date' : 'No date') + '</span>';
+    }
+    if (!alertsHtml) alertsHtml = '<span style="color:#94a3b8;">' + sanitize(toComplete) + '</span>';
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;vertical-align:top;">' + alertsHtml + '</td>';
+
+    // Date
+    var dateText = '';
+    if (task.Status === 'done') {
+      var completionDate = task.Completion_Date || task.Due_Date;
+      dateText = completionDate ? formatDate(completionDate) : toComplete;
+    } else {
+      dateText = task.Due_Date ? formatDate(task.Due_Date) : toComplete;
+    }
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;white-space:nowrap;vertical-align:top;">' + sanitize(dateText) + '</td>';
+
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  return html;
+}
+
+function downloadSynthesisMarkdown() {
+  var textarea = document.getElementById('synthesis-markdown');
+  if (!textarea || !textarea.value) return;
+  var select = document.getElementById('synthesis-project-select');
+  var projectId = select ? select.value : 'projet';
+  var project = projects.find(function(p) { return p.id === parseInt(projectId); });
+  var filename = 'synthese-' + (project ? project.Name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'projet') + '.md';
+
+  var blob = new Blob([textarea.value], { type: 'text/markdown;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(t('synthesisDownload') + ' ✓', 'success');
+}
+
+// =============================================================================
+// SYNTHESIS — Gantt Mermaid
+// =============================================================================
+
+// Convertit une date epoch (secondes) en format YYYY-MM-DD pour Mermaid
+function mermaidDate(epochSec) {
+  if (!epochSec) return null;
+  var d = new Date(epochSec * 1000);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().split('T')[0];
+}
+
+// Échappe les caractères spéciaux pour Mermaid (évite les problèmes de parsing)
+function mermaidEscape(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/:/g, '&#58;')   // deux-points
+    .replace(/,/g, '&#44;')   // virgule
+    .replace(/;/g, '&#59;')   // point-virgule
+    .replace(/\[/g, '&#91;')  // crochet ouvrant
+    .replace(/\]/g, '&#93;')  // crochet fermant
+    .replace(/\n/g, ' ');     // saut de ligne
+}
+
+// Génère le diagramme de Gantt au format Mermaid
+function generateMermaidGantt() {
+  var select = document.getElementById('synthesis-project-select');
+  var projectId = select ? parseInt(select.value) : null;
+  if (!projectId) {
+    showToast(t('synthesisNoProject'), 'error');
+    return;
+  }
+  var project = projects.find(function(p) { return p.id === projectId; });
+  if (!project) return;
+
+  // Filtrer les tâches du projet avec des dates
+  var projectTasks = tasks.filter(function(tk) {
+    return tk.Project_Id === projectId && (tk.Start_Date || tk.Due_Date);
+  });
+  if (projectTasks.length === 0) {
+    showToast(t('synthesisMermaidNoTasks'), 'info');
+    return;
+  }
+
+  // Trier par date de début
+  projectTasks.sort(function(a, b) {
+    var da = a.Start_Date || a.Due_Date || 0;
+    var db = b.Start_Date || b.Due_Date || 0;
+    return da - db;
+  });
+
+  // Construire le code Mermaid
+  var md = 'gantt\n';
+  md += '    title ' + mermaidEscape(project.Name) + '\n';
+  md += '    dateFormat YYYY-MM-DD\n';
+  md += '    axisFormat %d/%m/%Y\n';
+  md += '    todayMarker on\n';
+
+  var taskIdMap = {}; // Map task.id -> mermaid id
+
+  // Une section par tâche, avec la tâche parente + sous-tâches + jalons
+  projectTasks.forEach(function(task) {
+    var mid = 't' + task.id;
+    taskIdMap[task.id] = mid;
+
+    var startDate = mermaidDate(task.Start_Date || task.Due_Date);
+    var endDate = mermaidDate(task.Due_Date || task.Start_Date);
+
+    // Récupérer les sous-tâches et jalons
+    var taskSubtasks = getTaskSubtasks(task.id);
+    var milestones = taskSubtasks.filter(function(st) { return isMilestone(st); });
+    var subtasksOnly = taskSubtasks.filter(function(st) { return !isMilestone(st); });
+
+    md += '\n';
+    md += '    section ' + mermaidEscape(task.Title) + '\n';
+
+    // Tâche parente (toujours affichée, même sans sous-tâches)
+    var statusTag = '';
+    if (task.Status === 'done') statusTag = 'done,';
+    else if (task.Status === 'progress') statusTag = 'active,';
+
+    // Dépendances : after t{depId}
+    var deps = getTaskDependencies(task.id);
+    var afterClause = '';
+    if (deps.length > 0) {
+      var depIds = deps.map(function(d) { return taskIdMap[d.id] || ('t' + d.id); }).filter(Boolean);
+      if (depIds.length > 0) {
+        afterClause = 'after ' + depIds.join(' ') + ', ';
+      }
+    }
+
+    var line = '    ' + mermaidEscape(task.Title) + ' :' + statusTag + mid + ', ' + afterClause;
+    if (startDate && endDate && startDate !== endDate) {
+      line += startDate + ', ' + endDate;
+    } else if (startDate) {
+      line += startDate + ', 1d';
+    } else if (endDate) {
+      line += endDate + ', 1d';
+    } else {
+      line += '2024-01-01, 1d'; // fallback
+    }
+    md += line + '\n';
+
+    // Sous-tâches
+    subtasksOnly.forEach(function(st) {
+      var sid = 's' + st.id;
+      var stStart = mermaidDate(st.Start_Date || st.Due_Date);
+      var stEnd = mermaidDate(st.Due_Date || st.Start_Date);
+      if (!stStart && !stEnd) return; // Pas de date, ignorer
+
+      var stLine = '    ↳ ' + mermaidEscape(st.Title);
+      var stStatusTag = st.Completed ? 'done,' : (st.Status === 'progress' ? 'active,' : '');
+
+      if (stStart && stEnd && stStart !== stEnd) {
+        stLine += ' :' + stStatusTag + sid + ', ' + stStart + ', ' + stEnd;
+      } else if (stStart) {
+        stLine += ' :' + stStatusTag + sid + ', ' + stStart + ', 1d';
+      } else {
+        stLine += ' :' + stStatusTag + sid + ', ' + stEnd + ', 1d';
+      }
+      md += stLine + '\n';
+    });
+
+    // Jalons (milestones)
+    milestones.forEach(function(st) {
+      var msid = 'm' + st.id;
+      var mDate = mermaidDate(st.Due_Date || st.Start_Date);
+      if (!mDate) return;
+
+      var mLine = '    ◆ ' + mermaidEscape(st.Title) + ' :milestone,' + (st.Completed ? 'done,' : '') + msid + ', ' + mDate + ', 0d';
+      md += mLine + '\n';
+    });
+  });
+
+  // Afficher le résultat
+  var textarea = document.getElementById('synthesis-mermaid-code');
+  if (textarea) textarea.value = md;
+
+  var output = document.getElementById('synthesis-mermaid-output');
+  if (output) output.style.display = 'block';
+
+  showToast(t('synthesisMermaidGenerated') + ' ✓', 'success');
+}
+function copyMermaidGantt() {
+  var textarea = document.getElementById('synthesis-mermaid-code');
+  if (!textarea || !textarea.value) return;
+  textarea.select();
+  textarea.setSelectionRange(0, 99999);
+  try {
+    document.execCommand('copy');
+    showToast(t('synthesisMermaidCopied'), 'success');
+  } catch (e) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(textarea.value).then(function() {
+        showToast(t('synthesisMermaidCopied'), 'success');
+      });
+    }
+  }
+}
+
+// Télécharge le code Mermaid en fichier .mmd
+function downloadMermaidGantt() {
+  var textarea = document.getElementById('synthesis-mermaid-code');
+  if (!textarea || !textarea.value) return;
+  var select = document.getElementById('synthesis-project-select');
+  var projectId = select ? select.value : 'projet';
+  var project = projects.find(function(p) { return p.id === parseInt(projectId); });
+  var filename = 'gantt-' + (project ? project.Name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'projet') + '.mmd';
+
+  var blob = new Blob([textarea.value], { type: 'text/plain;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(t('synthesisDownloadMermaid') + ' ✓', 'success');
+}
+
+// Copie le Gantt Mermaid en image PNG dans le presse-papiers (via mermaid.ink)
+// Copie le Gantt Mermaid en image PNG dans le presse-papiers
+// Utilise mermaid.js (rendu local) + html2canvas (capture) — évite les problèmes CORS
+async function copyMermaidGanttAsImage() {
+  var textarea = document.getElementById('synthesis-mermaid-code');
+  if (!textarea || !textarea.value) return;
+
+  showToast(t('synthesisImageGenerating'), 'info');
+
+  // Conteneur temporaire hors écran
+  var container = document.createElement('div');
+  container.style.cssText = 'position:absolute;left:-9999px;top:0;background:#ffffff;padding:24px;font-family:Calibri,Arial,sans-serif;';
+  document.body.appendChild(container);
+
+  try {
+    if (typeof mermaid === 'undefined') {
+      throw new Error('Mermaid.js non chargé');
+    }
+
+    // Initialiser mermaid
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'loose',
+      gantt: {
+        axisFormat: '%d/%m/%Y',
+        fontFamily: 'Calibri, Arial, sans-serif'
+      }
+    });
+
+    // Rendre le diagramme (génère un SVG)
+    var renderId = 'mermaid-gantt-' + Date.now();
+    var renderResult = await mermaid.render(renderId, textarea.value);
+    container.innerHTML = renderResult.svg;
+
+    // Capturer avec html2canvas
+    var canvas = await html2canvas(container, {
+      backgroundColor: '#ffffff',
+      scale: 3,
+      logging: false,
+      useCORS: false
+    });
+
+    // Convertir le canvas en blob PNG
+    var blob = await new Promise(function(resolve, reject) {
+      canvas.toBlob(function(b) {
+        if (b) resolve(b);
+        else reject(new Error('Échec conversion canvas → blob'));
+      }, 'image/png');
+    });
+
+    // Copier dans le presse-papiers
+    if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+      var item = new ClipboardItem({ 'image/png': blob });
+      await navigator.clipboard.write([item]);
+      showToast(t('synthesisImageCopied'), 'success');
+    } else {
+      // Fallback : télécharger l'image
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'gantt.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(t('synthesisImageCopied'), 'success');
+    }
+  } catch (e) {
+    console.error('Erreur copie image Mermaid:', e);
+    showToast(t('synthesisImageError') + ' (' + (e.message || e) + ')', 'error');
+  } finally {
+    // Nettoyer le conteneur temporaire
+    if (container && container.parentNode) {
+      document.body.removeChild(container);
+    }
+  }
 }

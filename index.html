@@ -17,6 +17,7 @@
   <!-- Export PDF du Gantt (A2) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
   <style>
     /* ========== RESET & BASE ========== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -98,6 +99,14 @@
     }
     .tab-btn:hover { color: #1e293b; background: #e2e8f0; }
     .tab-btn.active { color: #1e293b; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .toggle-hidden-tabs-btn { padding: 8px 12px; font-size: 16px; font-weight: 700; line-height: 1; min-width: 36px; justify-content: center; }
+    .synthesis-preview table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .synthesis-preview th { padding: 8px; border: 1px solid #e2e8f0; background: #3b82f6; color: white; font-weight: 600; text-align: left; }
+    .synthesis-preview td { padding: 8px; border: 1px solid #e2e8f0; vertical-align: top; }
+    .synthesis-preview h1 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+    #synthesis-markdown { width: 100%; height: 600px; font-family: monospace; font-size: 12px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; resize: vertical; box-sizing: border-box; }
+    #synthesis-project-select { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; min-width: 250px; }
+    @media (max-width: 768px) { .synthesis-controls { flex-direction: column; align-items: stretch; } #synthesis-project-select { width: 100%; } }
     .tab-content { display: none; padding: 0 24px 24px; }
     .tab-content.active { display: block; }
 
@@ -3783,6 +3792,8 @@
       background: #1e293b;
       color: white;
     }
+    body.dark-mode .toggle-hidden-tabs-btn { color: #94a3b8; }
+    body.dark-mode .toggle-hidden-tabs-btn:hover { background: #475569; color: #e2e8f0; }
     body.dark-mode .kanban-column {
       background: #1e293b;
     }
@@ -4103,6 +4114,8 @@
           <button class="tab-btn" data-tab="stats" onclick="switchTab('stats')">📈 <span data-i18n="tabStats">Stats</span></button>
           <button class="tab-btn" data-tab="team" onclick="switchTab('team')">👥 <span data-i18n="tabTeam">Équipe</span></button>
           <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">⚙️ <span data-i18n="tabSettings">Paramètres</span></button>
+          <button class="tab-btn" data-tab="synthesis" onclick="switchTab('synthesis')">📋 <span data-i18n="tabSynthesis">Synthèse</span></button>
+          <button class="tab-btn toggle-hidden-tabs-btn" id="toggle-hidden-tabs-btn" onclick="toggleHiddenTabs()" title="Afficher plus d'onglets" style="display:none;">+</button>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div id="project-selector" class="project-selector"></div>
@@ -4534,6 +4547,50 @@
             </a>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- TAB: SYNTHESIS -->
+    <div class="tab-content" id="tab-synthesis">
+      <div class="section-title">
+        <h2 data-i18n="tabSynthesis">Synthèse</h2>
+        <p data-i18n="synthesisSubtitle">Générez un tableau de pilotage détaillé par projet au format Markdown</p>
+      </div>
+      <div class="synthesis-controls" style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+        <select id="synthesis-project-select" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;min-width:250px;">
+          <option value="" data-i18n="synthesisSelectProject">Sélectionner un projet</option>
+        </select>
+        <button class="btn btn-primary" onclick="generateSynthesisMarkdown()" data-i18n="synthesisGenerate">Générer le Markdown</button>
+        <button class="btn btn-secondary" onclick="generateMermaidGantt()" data-i18n="synthesisGanttMermaid">📊 Gantt Mermaid</button>
+      </div>
+      <div id="synthesis-mermaid-output" style="display:none;margin-top:16px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+          <span style="font-size:13px;font-weight:600;color:#1e293b;" data-i18n="synthesisMermaidTitle">Diagramme de Gantt (Mermaid)</span>
+          <button class="btn btn-secondary btn-sm" onclick="copyMermaidGantt()">📋 <span data-i18n="synthesisCopy">Copier</span></button>
+          <button class="btn btn-secondary btn-sm" onclick="copyMermaidGanttAsImage()" title="Copie le Gantt en image PNG pour PowerPoint">🖼️ <span data-i18n="synthesisCopyImage">Copier image</span></button>
+          <button class="btn btn-secondary btn-sm" onclick="downloadMermaidGantt()">💾 <span data-i18n="synthesisDownloadMermaid">Télécharger .mmd</span></button>
+        </div>
+        <textarea id="synthesis-mermaid-code" readonly style="width:100%;height:400px;font-family:monospace;font-size:12px;border:1px solid #e2e8f0;border-radius:8px;padding:12px;resize:vertical;box-sizing:border-box;background:#f8fafc;"></textarea>
+      </div>
+      </div>
+      <div id="synthesis-output" style="display:none;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button class="btn btn-secondary btn-sm" onclick="copySynthesisMarkdown()">📋 <span data-i18n="synthesisCopy">Copier</span></button>
+          <button class="btn btn-secondary btn-sm" onclick="copySynthesisForPPT()" title="Colle un tableau éditable dans PowerPoint">📊 <span data-i18n="synthesisCopyPPT">Copier pour PPT</span></button>
+          <button class="btn btn-secondary btn-sm" onclick="downloadSynthesisMarkdown()">💾 <span data-i18n="synthesisDownload">Télécharger .md</span></button>
+        </div>
+        <div id="synthesis-pagination" style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+          <span style="font-size:13px;color:#64748b;" data-i18n="synthesisPagination">Pagination PPT (3 tâches/page) :</span>
+          <button class="btn btn-secondary btn-sm" id="synthesis-page-prev" onclick="synthesisGoToPage(-1)" style="padding:4px 12px;">◀</button>
+          <span id="synthesis-page-info" style="font-size:13px;font-weight:600;color:#1e293b;min-width:120px;text-align:center;">Page 1 / 1</span>
+          <button class="btn btn-secondary btn-sm" id="synthesis-page-next" onclick="synthesisGoToPage(1)" style="padding:4px 12px;">▶</button>
+          <span id="synthesis-page-tasks" style="font-size:12px;color:#94a3b8;"></span>
+        </div>
+        <div>
+          <h4 style="margin-bottom:8px;" data-i18n="synthesisPreview">Aperçu</h4>
+          <div id="synthesis-preview" class="synthesis-preview" style="border:1px solid #e2e8f0;border-radius:8px;padding:16px;background:white;overflow:auto;max-height:600px;"></div>
+        </div>
+        <textarea id="synthesis-markdown" readonly style="display:none;"></textarea>
       </div>
     </div>
 
