@@ -177,7 +177,7 @@ var i18n = {
     categories: 'Produits',
     tabTeam: 'Équipe',
     tabSynthesis: 'Synthèse',
-    synthesisSubtitle: 'Générez un tableau de pilotage détaillé par projet au format Markdown',
+    synthesisSubtitle: 'Générez un tableau de pilotage détaillé par projet ou par produit au format Markdown',
     synthesisSelectProject: 'Sélectionner un projet',
     synthesisGenerate: 'Générer le Markdown',
     synthesisCopy: 'Copier',
@@ -185,6 +185,8 @@ var i18n = {
     synthesisCopied: 'Markdown copié dans le presse-papiers !',
     synthesisNoProject: 'Veuillez sélectionner un projet',
     synthesisNoTasks: 'Aucune tâche dans ce projet',
+    synthesisSelectProduct: 'Sélectionner un produit',
+    synthesisNoSelection: 'Veuillez sélectionner un projet ou un produit',
     synthesisPhase: 'Phase',
     synthesisStatus: 'Statut',
     synthesisProgress: '%',
@@ -568,9 +570,11 @@ var i18n = {
     categories: 'Products',
     tabTeam: 'Team',
     tabSynthesis: 'Synthesis',
-    synthesisSubtitle: 'Generate a detailed project dashboard in Markdown format',
+    synthesisSubtitle: 'Generate a detailed project or product dashboard in Markdown format',
     synthesisSelectProject: 'Select a project',
     synthesisGenerate: 'Generate Markdown',
+    synthesisSelectProduct: 'Select a product',
+    synthesisNoSelection: 'Please select a project or a product',
     synthesisCopy: 'Copy',
     synthesisDownload: 'Download .md',
     synthesisCopied: 'Markdown copied to clipboard!',
@@ -11746,6 +11750,18 @@ function renderSynthesisView() {
     html += '<option value="' + p.id + '">' + sanitize(p.Name) + ' (' + taskCount + ' ' + (currentLang === 'fr' ? 'tâches' : 'tasks') + ')</option>';
   });
   select.innerHTML = html;
+  // Peupler le sélecteur de produits (PM_Categories)
+  var catSelect = document.getElementById('synthesis-category-select');
+  if (catSelect) {
+    var cHtml = '<option value="">' + t('synthesisSelectProduct') + '</option>';
+    categories.forEach(function(c) {
+      var cName = String(c.Name || '').trim();
+      if (!cName) return;
+      var taskCount = tasks.filter(function(tk) { return String(tk.Category || '').trim() === cName; }).length;
+      cHtml += '<option value="' + sanitize(cName) + '">' + sanitize(cName) + ' (' + taskCount + ' ' + (currentLang === 'fr' ? 'tâches' : 'tasks') + ')</option>';
+    });
+    catSelect.innerHTML = cHtml;
+  }
   // Masquer la sortie si on change de vue
   var output = document.getElementById('synthesis-output');
   if (output) output.style.display = 'none';
@@ -11849,17 +11865,23 @@ function updateSynthesisPPTPreview() {
 }
 
 function generateSynthesisMarkdown() {
+  // Sélection : projet et/ou produit
   var select = document.getElementById('synthesis-project-select');
-  var projectId = select ? parseInt(select.value) : null;
-  if (!projectId) {
-    showToast(t('synthesisNoProject'), 'error');
+  var catSelect = document.getElementById('synthesis-category-select');
+  var projectId = (select && select.value) ? parseInt(select.value) : null;
+  var productName = (catSelect && catSelect.value) ? catSelect.value : null;
+  if (!projectId && !productName) {
+    showToast(t('synthesisNoSelection'), 'error');
     return;
   }
-  var project = projects.find(function(p) { return p.id === projectId; });
-  if (!project) return;
+  var project = projectId ? projects.find(function(p) { return p.id === projectId; }) : null;
 
-  // Filtrer les tâches du projet
-  var projectTasks = tasks.filter(function(tk) { return tk.Project_Id === projectId; });
+  // Filtrer les tâches du projet et/ou du produit
+  var projectTasks = tasks.filter(function(tk) {
+    if (projectId && tk.Project_Id !== projectId) return false;
+    if (productName && String(tk.Category || '').trim() !== productName) return false;
+    return true;
+  });
   if (projectTasks.length === 0) {
     showToast(t('synthesisNoTasks'), 'info');
     return;
@@ -11881,9 +11903,12 @@ function generateSynthesisMarkdown() {
   var toComplete = t('synthesisToComplete');
   var now = Math.floor(Date.now() / 1000);
 
-  // Construire le tableau Markdown
-  var md = '# ' + (currentLang === 'fr' ? 'Tableau de Pilotage Détaillé' : 'Detailed Project Dashboard') + ' — ' + project.Name + '\n\n';
-  if (project.Description) md += '> ' + project.Description + '\n\n';
+  // Titre : projet, produit ou les deux
+  var productLabel = (currentLang === 'fr' ? 'Produit : ' : 'Product: ') + productName;
+  var scopeName = project ? project.Name : '';
+  if (productName) scopeName = scopeName ? scopeName + ' / ' + productLabel : productLabel;
+  var md = '# ' + (currentLang === 'fr' ? 'Tableau de Pilotage Détaillé' : 'Detailed Project Dashboard') + ' — ' + scopeName + '\n\n';
+  if (project && project.Description) md += '> ' + project.Description + '\n\n';
   md += '| ' + t('synthesisPhase') + ' | ' + t('synthesisProgress') + ' | ' + t('synthesisActions') + ' | ' + t('synthesisPrereq') + ' | ' + t('synthesisActors') + ' | ' + t('synthesisAlerts') + ' | ' + t('synthesisDate') + ' |\n';
   md += '|-------|---|-------------|------------|---------|---------|------------------------------|\n';
 
@@ -12190,9 +12215,11 @@ function downloadSynthesisMarkdown() {
   var textarea = document.getElementById('synthesis-markdown');
   if (!textarea || !textarea.value) return;
   var select = document.getElementById('synthesis-project-select');
-  var projectId = select ? select.value : 'projet';
-  var project = projects.find(function(p) { return p.id === parseInt(projectId); });
-  var filename = 'synthese-' + (project ? project.Name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'projet') + '.md';
+  var catSelect = document.getElementById('synthesis-category-select');
+  var project = (select && select.value) ? projects.find(function(p) { return p.id === parseInt(select.value); }) : null;
+  var productName = (catSelect && catSelect.value) ? catSelect.value : null;
+  var baseName = project ? project.Name : (productName || 'projet');
+  var filename = 'synthese-' + baseName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.md';
 
   var blob = new Blob([textarea.value], { type: 'text/markdown;charset=utf-8' });
   var url = URL.createObjectURL(blob);
