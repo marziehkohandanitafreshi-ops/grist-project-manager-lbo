@@ -893,31 +893,6 @@ async function syncSubtaskStatusChoices() {
     console.log('syncSubtaskStatusChoices:', e.message);
   }
 }
-
-// Synchronise les choix de la colonne Priority des tables gérées :
-// ajoute P0/P1/P2/P3/NVP0 aux choix Grist (comme syncSubtaskStatusChoices
-// le fait pour les statuts, avec une signature en cache pour éviter les
-// réécritures inutiles)
-async function syncPriorityChoices() {
-  try {
-    var widgetOptions = JSON.stringify({ choices: PRIORITIES });
-    if (typeof localStorage !== 'undefined' && localStorage.getItem('pm_priority_sig') === widgetOptions) return;
-    var prioTables = [TASKS_TABLE, SUBTASKS_TABLE, TEMPLATES_TABLE];
-    for (var i = 0; i < prioTables.length; i++) {
-      try {
-        await grist.docApi.applyUserActions([
-          ['ModifyColumn', prioTables[i], 'Priority', { widgetOptions: widgetOptions }]
-        ]);
-      } catch (pe) {
-        console.log('syncPriorityChoices (' + prioTables[i] + '):', pe.message);
-      }
-    }
-    if (typeof localStorage !== 'undefined') localStorage.setItem('pm_priority_sig', widgetOptions);
-  } catch (e) {
-    console.log('syncPriorityChoices:', e.message);
-  }
-}
-
 function getStatusLabel(key) {
   var statuses = getKanbanStatuses();
   var found = statuses.find(function(s) { return s.key === key; });
@@ -1968,16 +1943,6 @@ function priorityLabel(p) {
   return p || '';
 }
 
-// Priorités disponibles dans le widget (colonne Choice Grist, formulaires, filtres)
-var PRIORITIES = ['high', 'medium', 'low', 'P0', 'P1', 'P2', 'P3', 'NVP0'];
-
-// Pastille de couleur par priorité
-function priorityDotClass(p) {
-  if (p === 'high' || p === 'P0' || p === 'P1') return 'dot-high';
-  if (p === 'medium' || p === 'P2') return 'dot-medium';
-  return 'dot-low';
-}
-
 function statusLabel(s) {
   return getStatusLabel(s) || s || '';
 }
@@ -2041,7 +2006,7 @@ async function ensureTables() {
           { id: 'Title', type: 'Text' },
           { id: 'Description', type: 'Text' },
           { id: 'Status', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['todo', 'progress', 'done', 'archived'] }) },
-          { id: 'Priority', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['high', 'medium', 'low', 'P0', 'P1', 'P2', 'P3', 'NVP0'] }) },
+          { id: 'Priority', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['high', 'medium', 'low'] }) },
           { id: 'Assignee', type: 'Text' },
           { id: 'Group_Name', type: 'Text' },
           { id: 'Start_Date', type: 'Date' },
@@ -2081,7 +2046,7 @@ async function ensureTables() {
         ['AddTable', TEMPLATES_TABLE, [
           { id: 'Title', type: 'Text' },
           { id: 'Description', type: 'Text' },
-          { id: 'Priority', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['high', 'medium', 'low', 'P0', 'P1', 'P2', 'P3', 'NVP0'] }) },
+          { id: 'Priority', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['high', 'medium', 'low'] }) },
           { id: 'Category', type: 'Text' },
           { id: 'Estimated_Hours', type: 'Numeric' },
           { id: 'Group_Name', type: 'Text' },
@@ -2100,7 +2065,7 @@ async function ensureTables() {
           { id: 'Title', type: 'Text' },
           { id: 'Description', type: 'Text' },
           { id: 'Status', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['todo', 'progress', 'done', 'archived'] }) },
-          { id: 'Priority', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['high', 'medium', 'low', 'P0', 'P1', 'P2', 'P3', 'NVP0'] }) },
+          { id: 'Priority', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['high', 'medium', 'low'] }) },
           { id: 'Assignee', type: 'Text' },
           { id: 'Contributors', type: 'Text' },
           { id: 'Tag', type: 'Text' },
@@ -2462,7 +2427,7 @@ async function ensureTables() {
           stActions.push(['AddColumn', SUBTASKS_TABLE, 'Status', { type: 'Choice', widgetOptions: JSON.stringify({ choices: ['todo', 'progress', 'done', 'archived'] }) }]);
         }
         if (stCols.indexOf('Priority') === -1) {
-          stActions.push(['AddColumn', SUBTASKS_TABLE, 'Priority', { type: 'Choice', widgetOptions: JSON.stringify({ choices: ['high', 'medium', 'low', 'P0', 'P1', 'P2', 'P3', 'NVP0'] }) }]);
+          stActions.push(['AddColumn', SUBTASKS_TABLE, 'Priority', { type: 'Choice', widgetOptions: JSON.stringify({ choices: ['high', 'medium', 'low'] }) }]);
         }
         if (stCols.indexOf('Estimated_Hours') === -1) {
           stActions.push(['AddColumn', SUBTASKS_TABLE, 'Estimated_Hours', { type: 'Numeric' }]);
@@ -3103,7 +3068,11 @@ function renderMultiFilter(kind) {
     selected = tableFilterStatuses;
     placeholder = currentLang === 'fr' ? 'Tous les statuts' : 'All statuses';
   } else {
-    opts = PRIORITIES.map(function(p) { return { value: p, label: priorityLabel(p) }; });
+    opts = [
+      { value: 'high', label: t('priorityHigh') },
+      { value: 'medium', label: t('priorityMedium') },
+      { value: 'low', label: t('priorityLow') }
+    ];
     selected = tableFilterPriorities;
     placeholder = currentLang === 'fr' ? 'Toutes priorités' : 'All priorities';
   }
@@ -4111,10 +4080,10 @@ function sortKanbanTasks(list) {
       return 0;
     });
   } else if (kanbanSort === 'priority') {
-    var po = { high: 0, medium: 1, low: 2, P0: 3, P1: 4, P2: 5, P3: 6, NVP0: 7 };
+    var po = { high: 0, medium: 1, low: 2 };
     arr.sort(function(a, b) {
-      var pa = po[a.Priority] !== undefined ? po[a.Priority] : 8;
-      var pb = po[b.Priority] !== undefined ? po[b.Priority] : 8;
+      var pa = po[a.Priority] !== undefined ? po[a.Priority] : 3;
+      var pb = po[b.Priority] !== undefined ? po[b.Priority] : 3;
       return pa - pb;
     });
   }
@@ -4177,12 +4146,7 @@ function renderKanbanView() {
     columns = [
       { key: 'high',   label: '🔴 ' + t('priorityHigh'),   cssClass: 'col-todo',     field: 'Priority' },
       { key: 'medium', label: '🟡 ' + t('priorityMedium'), cssClass: 'col-progress', field: 'Priority' },
-      { key: 'low',    label: '🟢 ' + t('priorityLow'),    cssClass: 'col-done',     field: 'Priority' },
-      { key: 'P0',     label: '🟠 P0',   cssClass: 'col-todo',     field: 'Priority' },
-      { key: 'P1',     label: '🟠 P1',   cssClass: 'col-progress', field: 'Priority' },
-      { key: 'P2',     label: '🟡 P2',   cssClass: 'col-progress', field: 'Priority' },
-      { key: 'P3',     label: '⚪ P3',   cssClass: 'col-done',     field: 'Priority' },
-      { key: 'NVP0',   label: '⚫ NVP0', cssClass: 'col-done',     field: 'Priority' }
+      { key: 'low',    label: '🟢 ' + t('priorityLow'),    cssClass: 'col-done',     field: 'Priority' }
     ];
   } else if (kanbanGroupBy === 'project') {
     var projMap = {};
@@ -4640,7 +4604,7 @@ function renderTableView() {
         case 'Title': va = (a.Title || '').toLowerCase(); vb = (b.Title || '').toLowerCase(); break;
         case 'Project': va = getProjectName(a.Project_Id).toLowerCase(); vb = getProjectName(b.Project_Id).toLowerCase(); break;
         case 'Status': va = a.Status || ''; vb = b.Status || ''; break;
-        case 'Priority': var po = {high:0,medium:1,low:2,P0:3,P1:4,P2:5,P3:6,NVP0:7}; va = po[a.Priority] !== undefined ? po[a.Priority] : 8; vb = po[b.Priority] !== undefined ? po[b.Priority] : 8; break;
+        case 'Priority': var po = {high:0,medium:1,low:2}; va = po[a.Priority] !== undefined ? po[a.Priority] : 3; vb = po[b.Priority] !== undefined ? po[b.Priority] : 3; break;
         case 'Assignee': va = (a.Assignee || '').toLowerCase(); vb = (b.Assignee || '').toLowerCase(); break;
         case 'Start_Date': va = a.Start_Date || 0; vb = b.Start_Date || 0; break;
         case 'Due_Date': va = a.Due_Date || 0; vb = b.Due_Date || 0; break;
@@ -4671,7 +4635,7 @@ function renderTableView() {
     var task = filtered[i];
     var statusClass = 'status-' + task.Status;
     var overdueHtml = isOverdue(task) ? ' ⚠️' : '';
-    var dotClass = priorityDotClass(task.Priority);
+    var dotClass = task.Priority === 'high' ? 'dot-high' : (task.Priority === 'medium' ? 'dot-medium' : 'dot-low');
 
     var taskSubtasks = getVisibleTaskSubtasks(task.id);
     var completedSt = taskSubtasks.filter(function(st) { return st.Completed; }).length;
@@ -4714,7 +4678,7 @@ function renderTableView() {
       var st = taskSubtasks[si];
       html += '<tr class="subtask-row clickable-row" id="table-st-row-' + st.id + '" data-parent="' + task.id + '" style="display:none;cursor:pointer;" onclick="openEditTaskModal(' + task.id + ', true); setTimeout(function(){startEditSubtask(' + st.id + ')},100);">';
       var stStatus = st.Status || (st.Completed ? 'done' : 'todo');
-      var stDotClass = priorityDotClass(st.Priority);
+      var stDotClass = st.Priority === 'high' ? 'dot-high' : (st.Priority === 'medium' ? 'dot-medium' : 'dot-low');
       var stAssignee = st.Assignee ? st.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : '';
       var stOverdue = st.Due_Date && !st.Completed && st.Due_Date < _nowSec;
       // DoD de la sous-tâche : lignes dépliables au niveau en dessous (vue tableau)
@@ -5011,7 +4975,7 @@ function getGanttBarClass(task) {
 }
 
 function renderGanttTaskLabel(task) {
-  var dotClass = priorityDotClass(task.Priority);
+  var dotClass = task.Priority === 'high' ? 'dot-high' : (task.Priority === 'medium' ? 'dot-medium' : 'dot-low');
   var assigneeNames = task.Assignee ? task.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : '';
   var ganttProjColor = getProjectColor(task.Project_Id);
   var ganttProjName = getProjectName(task.Project_Id);
@@ -5158,10 +5122,10 @@ function renderGanttView() {
   var ganttSortSel = document.getElementById('gantt-sort');
   if (ganttSortSel && ganttSortSel.value !== ganttSort) ganttSortSel.value = ganttSort;
   if (ganttSort === 'priority') {
-    var prioOrder = { high: 0, medium: 1, low: 2, P0: 3, P1: 4, P2: 5, P3: 6, NVP0: 7 };
+    var prioOrder = { high: 0, medium: 1, low: 2 };
     tasksWithDates.sort(function(a, b) {
-      var pa = prioOrder[a.Priority] !== undefined ? prioOrder[a.Priority] : 8;
-      var pb = prioOrder[b.Priority] !== undefined ? prioOrder[b.Priority] : 8;
+      var pa = prioOrder[a.Priority] !== undefined ? prioOrder[a.Priority] : 3;
+      var pb = prioOrder[b.Priority] !== undefined ? prioOrder[b.Priority] : 3;
       return pa - pb;
     });
   } else if (ganttSort === 'alpha') {
@@ -5879,7 +5843,7 @@ function renderTemplatesView() {
   var html = '';
   for (var i = 0; i < filtered.length; i++) {
     var tpl = filtered[i];
-    var dotClass = priorityDotClass(tpl.Priority);
+    var dotClass = tpl.Priority === 'high' ? 'dot-high' : (tpl.Priority === 'medium' ? 'dot-medium' : 'dot-low');
 
     html += '<div class="template-card">';
     html += '<div class="template-card-info">';
@@ -6599,9 +6563,9 @@ function openNewTaskModal(defaultStatus) {
   html += '<span class="detail-field-icon">🔥</span>';
   html += '<span class="detail-field-label">' + t('fieldPriority') + '</span>';
   html += '<div class="detail-field-value"><select id="task-priority">';
-  PRIORITIES.forEach(function(p) {
-    html += '<option value="' + p + '"' + (p === 'medium' ? ' selected' : '') + '>' + priorityLabel(p) + '</option>';
-  });
+  html += '<option value="medium">' + t('priorityMedium') + '</option>';
+  html += '<option value="high">' + t('priorityHigh') + '</option>';
+  html += '<option value="low">' + t('priorityLow') + '</option>';
   html += '</select></div></div>';
   html += '</div>';
 
@@ -6829,9 +6793,9 @@ function openEditTaskModal(taskId, preserveAssignees) {
   html += '<span class="detail-field-icon">🔥</span>';
   html += '<span class="detail-field-label">' + t('fieldPriority') + '</span>';
   html += '<div class="detail-field-value"><select id="task-priority">';
-  PRIORITIES.forEach(function(p) {
-    html += '<option value="' + p + '"' + (task.Priority === p ? ' selected' : '') + '>' + priorityLabel(p) + '</option>';
-  });
+  html += '<option value="high"' + (task.Priority === 'high' ? ' selected' : '') + '>' + t('priorityHigh') + '</option>';
+  html += '<option value="medium"' + (task.Priority === 'medium' ? ' selected' : '') + '>' + t('priorityMedium') + '</option>';
+  html += '<option value="low"' + (task.Priority === 'low' ? ' selected' : '') + '>' + t('priorityLow') + '</option>';
   html += '</select></div></div>';
 
   // Group
@@ -8803,9 +8767,9 @@ function openNewTemplateModal(tplId) {
   html += '<div class="form-group"><label>' + t('fieldDescription') + '</label><textarea id="tpl-desc">' + desc + '</textarea></div>';
   html += '<div class="form-row">';
   html += '<div class="form-group"><label>' + t('fieldPriority') + '</label><select id="tpl-priority">';
-  PRIORITIES.forEach(function(p) {
-    html += '<option value="' + p + '"' + (priority === p ? ' selected' : '') + '>' + priorityLabel(p) + '</option>';
-  });
+  html += '<option value="medium"' + (priority === 'medium' ? ' selected' : '') + '>' + t('priorityMedium') + '</option>';
+  html += '<option value="high"' + (priority === 'high' ? ' selected' : '') + '>' + t('priorityHigh') + '</option>';
+  html += '<option value="low"' + (priority === 'low' ? ' selected' : '') + '>' + t('priorityLow') + '</option>';
   html += '</select></div>';
   var tplCatOptions = '<option value=""' + (!category ? ' selected' : '') + '>--</option>';
   for (var tci = 0; tci < categories.length; tci++) {
@@ -9291,17 +9255,14 @@ function renderStatsView() {
   document.getElementById('chart-status').innerHTML = statusHtml;
 
   // Priority chart
-  var priorityCounts = {};
-  PRIORITIES.forEach(function(p) { priorityCounts[p] = 0; });
+  var priorityCounts = { high: 0, medium: 0, low: 0 };
   filteredTasks.forEach(function(t) { priorityCounts[t.Priority] = (priorityCounts[t.Priority] || 0) + 1; });
-  var maxPriority = 1;
-  PRIORITIES.forEach(function(p) { maxPriority = Math.max(maxPriority, priorityCounts[p]); });
+  var maxPriority = Math.max(priorityCounts.high, priorityCounts.medium, priorityCounts.low, 1);
   
   var priorityHtml = '';
-  var priorityColors = { high: '#ef4444', medium: '#f59e0b', low: '#22c55e', P0: '#7c3aed', P1: '#ec4899', P2: '#3b82f6', P3: '#14b8a6', NVP0: '#64748b' };
-  var priorityLabels = {};
-  PRIORITIES.forEach(function(p) { priorityLabels[p] = priorityLabel(p); });
-  PRIORITIES.forEach(function(p) {
+  var priorityColors = { high: '#ef4444', medium: '#f59e0b', low: '#22c55e' };
+  var priorityLabels = { high: t('priorityHigh'), medium: t('priorityMedium'), low: t('priorityLow') };
+  ['high', 'medium', 'low'].forEach(function(p) {
     var height = (priorityCounts[p] / maxPriority) * 160;
     priorityHtml += '<div class="chart-bar">';
     priorityHtml += '<span class="chart-bar-value">' + priorityCounts[p] + '</span>';
@@ -10528,7 +10489,11 @@ function onAutoTriggerChange() {
       var statuses = getKanbanStatuses();
       options = statuses.map(function(s) { return { value: s.key, label: currentLang === 'fr' ? s.label_fr : s.label_en }; });
     } else if (trigger === 'priority_change') {
-      options = PRIORITIES.map(function(p) { return { value: p, label: priorityLabel(p) }; });
+      options = [
+        { value: 'high', label: currentLang === 'fr' ? 'Haute' : 'High' },
+        { value: 'medium', label: currentLang === 'fr' ? 'Moyenne' : 'Medium' },
+        { value: 'low', label: currentLang === 'fr' ? 'Basse' : 'Low' }
+      ];
     }
     var optHtml = '<option value="">' + anyLabel + '</option>';
     for (var o = 0; o < options.length; o++) {
@@ -11757,7 +11722,6 @@ if (!isInsideGrist()) {
     restoreActiveTab();
     // Synchronise les choix de la colonne Status des sous-tâches avec les statuts personnalisés
     if (isOwner) syncSubtaskStatusChoices();
-    if (isOwner) syncPriorityChoices();
 
     // A6 : synchro live — recharge si la table liée change (édition directe dans Grist,
     // autre utilisateur). Debounce + on ne perturbe pas une saisie (modale ouverte).
