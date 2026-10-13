@@ -13,10 +13,6 @@ var i18n = {
     tabKanban: 'Kanban',
     tabTable: 'Tableau',
     tabGantt: 'Gantt',
-    tabSynthese: 'Synthèse',
-    syntheseTitle: 'Synthèse',
-    syntheseSubtitle: 'Rôles des responsables de tâches, sous-tâches et DoD',
-    colActeurs: 'Acteurs',
     tabTemplates: 'Templates',
     newTask: 'Nouvelle tâche',
     newProject: 'Nouveau projet',
@@ -408,10 +404,6 @@ var i18n = {
     tabKanban: 'Kanban',
     tabTable: 'Table',
     tabGantt: 'Gantt',
-    tabSynthese: 'Summary',
-    syntheseTitle: 'Summary',
-    syntheseSubtitle: 'Roles of task, subtask and DoD owners',
-    colActeurs: 'Actors',
     tabTemplates: 'Templates',
     newTask: 'New task',
     newProject: 'New project',
@@ -1964,7 +1956,6 @@ function switchTab(tabId) {
   if (tabId === 'calendar') renderCalendarView();
   if (tabId === 'kanban') renderKanbanView();
   if (tabId === 'table') renderTableView();
-  if (tabId === 'synthese') renderSyntheseView();
   if (tabId === 'gantt') renderGanttView();
   if (tabId === 'templates') renderTemplatesView();
   if (tabId === 'stats') renderStatsView();
@@ -3504,7 +3495,6 @@ function refreshAllViews() {
     if (tab === 'calendar') renderCalendarView();
     if (tab === 'kanban') renderKanbanView();
     if (tab === 'table') renderTableView();
-    if (tab === 'synthese') renderSyntheseView();
     if (tab === 'gantt') renderGanttView();
     if (tab === 'templates') renderTemplatesView();
     if (tab === 'stats') renderStatsView();
@@ -4528,76 +4518,6 @@ async function onDrop(e) {
     }
   }
   draggedTaskId = null;
-}
-
-// =============================================================================
-// SYNTHESE VIEW : une ligne par tâche ; colonne acteurs = responsables de la
-// tâche, de ses sous-tâches et de ses critères DoD, avec leur rôle.
-// Une personne qui apparaît plusieurs fois n'est listée qu'une seule fois.
-// =============================================================================
-
-// Responsables uniques d'une tâche (tâche + sous-tâches + DoD), avec le rôle
-// de chaque personne (résolu via PM_Users, nom OU email acceptés).
-function getTaskActors(task) {
-  var seen = {};
-  var actors = [];
-  function push(identStr) {
-    String(identStr || '').split(',').forEach(function(part) {
-      var s = part.trim();
-      if (!s) return;
-      var u = findUserByIdent(s);
-      var key = u ? String(u.Email || u.Name).toLowerCase().trim() : s.toLowerCase();
-      if (seen[key]) return;
-      seen[key] = true;
-      actors.push({
-        name: (u && u.Name) ? u.Name : getUserDisplayName(s),
-        role: u ? userRoleDisplay(u) : ''
-      });
-    });
-  }
-  push(task.Assignee);
-  getTaskSubtasks(task.id).forEach(function(st) {
-    push(st.Assignee);
-    getDoD(st).forEach(function(d) { push(d.assignee); });
-  });
-  return actors;
-}
-
-function renderSyntheseView() {
-  var el = document.getElementById('synthese-list');
-  if (!el) return;
-  var filtered = getFilteredTasks();
-  var html = '<table class="data-table">';
-  html += '<thead><tr>';
-  html += '<th>' + t('colTaskName') + '</th>';
-  html += '<th>' + (currentLang === 'fr' ? 'Projet' : 'Project') + '</th>';
-  html += '<th>' + t('colActeurs') + '</th>';
-  html += '</tr></thead><tbody>';
-  if (filtered.length === 0) {
-    html += '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:24px;">' + t('noTasks') + '</td></tr>';
-  }
-  for (var i = 0; i < filtered.length; i++) {
-    var task = filtered[i];
-    var projColor = getProjectColor(task.Project_Id);
-    var projName = getProjectName(task.Project_Id);
-    var actors = getTaskActors(task);
-    html += '<tr class="clickable-row" onclick="openEditTaskModal(' + task.id + ')">';
-    html += '<td><div style="display:flex;align-items:center;gap:8px;border-left:3px solid ' + projColor + ';padding-left:6px;font-weight:700;">' + sanitize(task.Title) + '</div></td>';
-    html += '<td>' + (projName ? '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:' + projColor + ';display:inline-block;"></span>' + sanitize(projName) + '</span>' : '') + '</td>';
-    html += '<td>';
-    if (actors.length === 0) {
-      html += '<span style="color:#94a3b8;">—</span>';
-    } else {
-      for (var ai = 0; ai < actors.length; ai++) {
-        var a = actors[ai];
-        html += '<div style="margin:2px 0;"><span class="assignee-chip">👤 ' + sanitize(a.name) + (a.role ? ' — ' + sanitize(a.role) : '') + '</span></div>';
-      }
-    }
-    html += '</td>';
-    html += '</tr>';
-  }
-  html += '</tbody></table>';
-  el.innerHTML = html;
 }
 
 // =============================================================================
