@@ -11765,7 +11765,12 @@ function getSubtaskStatusIcon(st) {
   if (st.Completed) return '✅';
   var status = st.Status || 'todo';
   if (status === 'done') return '✅';
-  if (status === 'progress') return '🔄';
+  // DoD : toutes cochées -> terminée, certaines cochées -> en cours
+  var dodList = getDoD(st);
+  var someDone = dodList.some(function(d) { return !!d.done; });
+  var allDone = dodList.length > 0 && dodList.every(function(d) { return !!d.done; });
+  if (allDone) return '✅';
+  if (status === 'progress' || someDone) return '🔄';
   return '⬜';
 }
 
