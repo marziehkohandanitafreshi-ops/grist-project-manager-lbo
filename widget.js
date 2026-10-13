@@ -177,7 +177,7 @@ var i18n = {
     categories: 'Produits',
     tabTeam: 'Équipe',
     tabSynthesis: 'Synthèse',
-    synthesisSubtitle: 'Générez un tableau de pilotage détaillé par projet au format Markdown',
+    synthesisSubtitle: 'Générez un tableau de pilotage détaillé par projet ou par produit au format Markdown',
     synthesisSelectProject: 'Sélectionner un projet',
     synthesisGenerate: 'Générer le Markdown',
     synthesisCopy: 'Copier',
@@ -185,6 +185,8 @@ var i18n = {
     synthesisCopied: 'Markdown copié dans le presse-papiers !',
     synthesisNoProject: 'Veuillez sélectionner un projet',
     synthesisNoTasks: 'Aucune tâche dans ce projet',
+    synthesisSelectProduct: 'Sélectionner un produit',
+    synthesisNoSelection: 'Veuillez sélectionner un projet ou un produit',
     synthesisPhase: 'Phase',
     synthesisStatus: 'Statut',
     synthesisProgress: '%',
@@ -208,10 +210,12 @@ var i18n = {
     synthesisDownloadMermaid: 'Télécharger .mmd',
     synthesisMermaidCopied: 'Code Mermaid copié !',
     synthesisMermaidNoTasks: 'Aucune tâche avec des dates dans ce projet',
+    synthesisMermaidAllDone: 'Aucune tâche à afficher : toutes sont terminées',
     synthesisMermaidGenerated: 'Gantt Mermaid généré',
     synthesisCopyImage: 'Copier image',
     synthesisImageCopied: 'Image Gantt copiée — collez dans PowerPoint !',
     synthesisImageError: 'Erreur génération image, réessayez',
+    synthesisImageDownloaded: 'Presse-papiers indisponible — image Gantt téléchargée',
     synthesisImageGenerating: 'Génération de l\'image en cours...',
     teamUsersTitle: 'Utilisateurs',
     teamUsersSubtitle: 'Gérez les membres de votre équipe',
@@ -568,9 +572,11 @@ var i18n = {
     categories: 'Products',
     tabTeam: 'Team',
     tabSynthesis: 'Synthesis',
-    synthesisSubtitle: 'Generate a detailed project dashboard in Markdown format',
+    synthesisSubtitle: 'Generate a detailed project or product dashboard in Markdown format',
     synthesisSelectProject: 'Select a project',
     synthesisGenerate: 'Generate Markdown',
+    synthesisSelectProduct: 'Select a product',
+    synthesisNoSelection: 'Please select a project or a product',
     synthesisCopy: 'Copy',
     synthesisDownload: 'Download .md',
     synthesisCopied: 'Markdown copied to clipboard!',
@@ -599,10 +605,12 @@ var i18n = {
     synthesisDownloadMermaid: 'Download .mmd',
     synthesisMermaidCopied: 'Mermaid code copied!',
     synthesisMermaidNoTasks: 'No tasks with dates in this project',
+    synthesisMermaidAllDone: 'Nothing to display: all tasks are completed',
     synthesisMermaidGenerated: 'Mermaid Gantt generated',
     synthesisCopyImage: 'Copy image',
     synthesisImageCopied: 'Gantt image copied — paste into PowerPoint!',
     synthesisImageError: 'Image generation error, please retry',
+    synthesisImageDownloaded: 'Clipboard unavailable — Gantt image downloaded',
     synthesisImageGenerating: 'Generating image...',
     teamUsersTitle: 'Users',
     teamUsersSubtitle: 'Manage your team members',
@@ -2477,13 +2485,50 @@ async function cleanupEmptyDraftTasks() {
     tasks = tasks.filter(function (tk) { return ghosts.indexOf(tk) === -1; });
   } catch (e) { console.error('cleanupEmptyDraftTasks:', e); }
 }
+// Debounce des champs de recherche : évite de reconstruire la vue à chaque
+// frappe (la recherche globale, la vue tableau et les templates scannent
+// l'ensemble des données).
+function _debounce(fn, ms) {
+  var timer = null;
+  return function() {
+    var args = arguments;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(function() { fn.apply(null, args); }, ms || 200);
+  };
+}
+var tableSearchDebounced = _debounce(function() { renderTableView(); }, 200);
+var templateSearchDebounced = _debounce(function() { renderTemplatesView(); }, 200);
+var globalSearchDebounced = _debounce(function(v) { globalSearch(v); }, 200);
+
 
 async function loadAllData() {
   // Load column mapping first
   await loadColumnMapping();
+    // Performance : les 16 fetchTable sont lancés en parallèle dès maintenant.
+    // Chaque bloc ci-dessous attend sa propre promesse : la latence totale est
+    // celle de la table la plus lente au lieu de la somme des appels.
+    // Un fetch échoué se résout en null, le catch du bloc concerné réagit
+    // exactement comme si le fetch avait échoué sur place.
+    var _pTask  = grist.docApi.fetchTable(TASKS_TABLE).catch(function() { return null; });
+    var _pUser  = grist.docApi.fetchTable(USERS_TABLE).catch(function() { return null; });
+    var _pGroup = grist.docApi.fetchTable(GROUPS_TABLE).catch(function() { return null; });
+    var _pTpl   = grist.docApi.fetchTable(TEMPLATES_TABLE).catch(function() { return null; });
+    var _pSub   = grist.docApi.fetchTable(SUBTASKS_TABLE).catch(function() { return null; });
+    var _pDep   = grist.docApi.fetchTable(DEPENDENCIES_TABLE).catch(function() { return null; });
+    var _pCom   = grist.docApi.fetchTable(COMMENTS_TABLE).catch(function() { return null; });
+    var _pAtt   = grist.docApi.fetchTable(ATTACHMENTS_TABLE).catch(function() { return null; });
+    var _pTime  = grist.docApi.fetchTable(TIME_ENTRIES_TABLE).catch(function() { return null; });
+    var _pCf    = grist.docApi.fetchTable(CUSTOM_FIELDS_TABLE).catch(function() { return null; });
+    var _pCfv   = grist.docApi.fetchTable(CUSTOM_FIELD_VALUES_TABLE).catch(function() { return null; });
+    var _pCat   = grist.docApi.fetchTable(CATEGORIES_TABLE).catch(function() { return null; });
+    var _pTag   = grist.docApi.fetchTable(TAGS_TABLE).catch(function() { return null; });
+    var _pProj  = grist.docApi.fetchTable(PROJECTS_TABLE).catch(function() { return null; });
+    var _pNotif = grist.docApi.fetchTable(NOTIFICATIONS_TABLE).catch(function() { return null; });
+    var _pLog   = grist.docApi.fetchTable(ACTIVITY_LOG_TABLE).catch(function() { return null; });
+
   
   try {
-    var taskData = await grist.docApi.fetchTable(TASKS_TABLE);
+    var taskData = await _pTask;
     tasks = [];
     if (taskData && taskData.id) {
       for (var i = 0; i < taskData.id.length; i++) {
@@ -2537,7 +2582,7 @@ async function loadAllData() {
   }
 
   try {
-    var userData = await grist.docApi.fetchTable(USERS_TABLE);
+    var userData = await _pUser;
     users = [];
     if (userData && userData.id) {
       var nameCol = getColumnName('users', 'name');
@@ -2560,7 +2605,7 @@ async function loadAllData() {
   }
 
   try {
-    var groupData = await grist.docApi.fetchTable(GROUPS_TABLE);
+    var groupData = await _pGroup;
     groups = [];
     if (groupData && groupData.id) {
       for (var i = 0; i < groupData.id.length; i++) {
@@ -2576,7 +2621,7 @@ async function loadAllData() {
   }
 
   try {
-    var tplData = await grist.docApi.fetchTable(TEMPLATES_TABLE);
+    var tplData = await _pTpl;
     templates = [];
     if (tplData && tplData.id) {
       for (var i = 0; i < tplData.id.length; i++) {
@@ -2600,7 +2645,7 @@ async function loadAllData() {
   }
 
   try {
-    var subtaskData = await grist.docApi.fetchTable(SUBTASKS_TABLE);
+    var subtaskData = await _pSub;
     subtasks = [];
     if (subtaskData && subtaskData.id) {
       for (var i = 0; i < subtaskData.id.length; i++) {
@@ -2644,7 +2689,7 @@ async function loadAllData() {
   }
 
   try {
-    var depData = await grist.docApi.fetchTable(DEPENDENCIES_TABLE);
+    var depData = await _pDep;
     dependencies = [];
     if (depData && depData.id) {
       for (var i = 0; i < depData.id.length; i++) {
@@ -2661,7 +2706,7 @@ async function loadAllData() {
   }
 
   try {
-    var commentData = await grist.docApi.fetchTable(COMMENTS_TABLE);
+    var commentData = await _pCom;
     comments = [];
     if (commentData && commentData.id) {
       for (var i = 0; i < commentData.id.length; i++) {
@@ -2679,7 +2724,7 @@ async function loadAllData() {
   }
 
   try {
-    var attData = await grist.docApi.fetchTable(ATTACHMENTS_TABLE);
+    var attData = await _pAtt;
     attachments = [];
     if (attData && attData.id) {
       for (var i = 0; i < attData.id.length; i++) {
@@ -2700,7 +2745,7 @@ async function loadAllData() {
   }
 
   try {
-    var timeData = await grist.docApi.fetchTable(TIME_ENTRIES_TABLE);
+    var timeData = await _pTime;
     timeEntries = [];
     if (timeData && timeData.id) {
       for (var i = 0; i < timeData.id.length; i++) {
@@ -2722,7 +2767,7 @@ async function loadAllData() {
   await loadWorkloadEntries();
 
   try {
-    var cfData = await grist.docApi.fetchTable(CUSTOM_FIELDS_TABLE);
+    var cfData = await _pCf;
     customFields = [];
     if (cfData && cfData.id) {
       for (var i = 0; i < cfData.id.length; i++) {
@@ -2742,7 +2787,7 @@ async function loadAllData() {
   }
 
   try {
-    var cfvData = await grist.docApi.fetchTable(CUSTOM_FIELD_VALUES_TABLE);
+    var cfvData = await _pCfv;
     customFieldValues = [];
     if (cfvData && cfvData.id) {
       for (var i = 0; i < cfvData.id.length; i++) {
@@ -2759,7 +2804,7 @@ async function loadAllData() {
   }
 
   try {
-    var catData = await grist.docApi.fetchTable(CATEGORIES_TABLE);
+    var catData = await _pCat;
     categories = [];
     if (catData && catData.id) {
       var nameCol = getColumnName('categories', 'name');
@@ -2781,7 +2826,7 @@ async function loadAllData() {
   }
 
   try {
-    var tagData = await grist.docApi.fetchTable(TAGS_TABLE);
+    var tagData = await _pTag;
     tags = [];
     if (tagData && tagData.id) {
       var nameCol = getColumnName('tags', 'name');
@@ -2800,7 +2845,7 @@ async function loadAllData() {
   }
 
   try {
-    var projData = await grist.docApi.fetchTable(PROJECTS_TABLE);
+    var projData = await _pProj;
     projects = [];
     if (projData && projData.id) {
       var nameCol = getColumnName('projects', 'name');
@@ -2828,7 +2873,7 @@ async function loadAllData() {
   }
 
   try {
-    var notifData = await grist.docApi.fetchTable(NOTIFICATIONS_TABLE);
+    var notifData = await _pNotif;
     pmNotifications = [];
     if (notifData && notifData.id) {
       for (var ni = 0; ni < notifData.id.length; ni++) {
@@ -2849,7 +2894,7 @@ async function loadAllData() {
   }
 
   try {
-    var logData = await grist.docApi.fetchTable(ACTIVITY_LOG_TABLE);
+    var logData = await _pLog;
     activityLog = [];
     if (logData && logData.id) {
       for (var ai = 0; ai < logData.id.length; ai++) {
@@ -4711,8 +4756,8 @@ function renderTableView() {
       // DoD : lignes au niveau en dessous de la sous-tâche, pliables/dépliables
       for (var sdi = 0; sdi < stDodShown.length; sdi++) {
         var sd = stDodShown[sdi].d;
-        html += '<tr class="dod-row" data-parent="' + task.id + '" data-st-parent="' + st.id + '" style="display:none;">';
-        html += '<td><div class="dod-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="dod-checkbox" ' + (sd.done ? 'checked' : '') + ' onchange="toggleDoD(' + st.id + ', ' + stDodShown[sdi].di + ', this.checked)" style="cursor:pointer;width:14px;height:14px;flex-shrink:0;" />';
+        html += '<tr class="dod-row clickable-row" data-parent="' + task.id + '" data-st-parent="' + st.id + '" style="display:none;cursor:pointer;" onclick="openEditTaskModal(' + task.id + ', true); setTimeout(function(){startEditSubtask(' + st.id + ')},100);">';
+        html += '<td><div class="dod-indent"><span class="subtask-arrow">└</span><input type="checkbox" class="dod-checkbox" ' + (sd.done ? 'checked' : '') + ' onclick="event.stopPropagation();" onchange="toggleDoD(' + st.id + ', ' + stDodShown[sdi].di + ', this.checked)" style="cursor:pointer;width:14px;height:14px;flex-shrink:0;" />';
         html += '<span class="dod-text' + (sd.done ? ' dod-text-done' : '') + '">' + sanitize(sd.text || '') + '</span>';
         html += '</div></td>';
         html += '<td></td><td></td><td></td><td></td><td>' + (sd.assignee ? '<span class="assignee-chip">👤 ' + sanitize(sd.assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ')) + '</span>' : '') + '</td><td></td><td></td><td></td>';
@@ -11724,7 +11769,13 @@ if (!isInsideGrist()) {
         _liveReloadTimer = setTimeout(function() {
           var modal = document.getElementById('modal-container');
           if (modal && modal.innerHTML.trim() !== '') return;
-          loadAllData();
+          loadAllData().then(function() {
+            // Purge des vieilles notifications après un rechargement : elles sont
+            // intégralement rechargées à chaque fois et ralentissent le fetch
+            // au fil des mois si elles s'accumulent (le nettoyage ne tournait
+            // qu'au démarrage du widget).
+            cleanupOldNotifications();
+          });
         }, 500);
       });
     }
@@ -11746,6 +11797,18 @@ function renderSynthesisView() {
     html += '<option value="' + p.id + '">' + sanitize(p.Name) + ' (' + taskCount + ' ' + (currentLang === 'fr' ? 'tâches' : 'tasks') + ')</option>';
   });
   select.innerHTML = html;
+  // Peupler le sélecteur de produits (PM_Categories)
+  var catSelect = document.getElementById('synthesis-category-select');
+  if (catSelect) {
+    var cHtml = '<option value="">' + t('synthesisSelectProduct') + '</option>';
+    categories.forEach(function(c) {
+      var cName = String(c.Name || '').trim();
+      if (!cName) return;
+      var taskCount = tasks.filter(function(tk) { return String(tk.Category || '').trim() === cName; }).length;
+      cHtml += '<option value="' + sanitize(cName) + '">' + sanitize(cName) + ' (' + taskCount + ' ' + (currentLang === 'fr' ? 'tâches' : 'tasks') + ')</option>';
+    });
+    catSelect.innerHTML = cHtml;
+  }
   // Masquer la sortie si on change de vue
   var output = document.getElementById('synthesis-output');
   if (output) output.style.display = 'none';
@@ -11765,8 +11828,41 @@ function getSubtaskStatusIcon(st) {
   if (st.Completed) return '✅';
   var status = st.Status || 'todo';
   if (status === 'done') return '✅';
-  if (status === 'progress') return '🔄';
+  // DoD : toutes cochées -> terminée, certaines cochées -> en cours
+  var dodList = getDoD(st);
+  var someDone = dodList.some(function(d) { return !!d.done; });
+  var allDone = dodList.length > 0 && dodList.every(function(d) { return !!d.done; });
+  if (allDone) return '✅';
+  if (status === 'progress' || someDone) return '🔄';
   return '⬜';
+}
+
+// Acteurs d'une tâche pour le tableau de pilotage : responsables de la tâche,
+// de ses sous-tâches et de ses critères DoD, avec le rôle de chacun.
+// Une personne qui apparaît plusieurs fois n'est listée qu'une seule fois.
+function getSynthesisTaskActors(task) {
+  var seen = {};
+  var actors = [];
+  function push(identStr) {
+    String(identStr || '').split(',').forEach(function(part) {
+      var s = part.trim();
+      if (!s) return;
+      var u = findUserByIdent(s);
+      var key = u ? String(u.Email || u.Name).toLowerCase().trim() : s.toLowerCase();
+      if (seen[key]) return;
+      seen[key] = true;
+      actors.push({
+        name: (u && u.Name) ? u.Name : getUserDisplayName(s),
+        role: u ? userRoleDisplay(u) : ''
+      });
+    });
+  }
+  push(task.Assignee);
+  getTaskSubtasks(task.id).forEach(function(st) {
+    push(st.Assignee);
+    getDoD(st).forEach(function(d) { push(d.assignee); });
+  });
+  return actors;
 }
 
 
@@ -11816,17 +11912,23 @@ function updateSynthesisPPTPreview() {
 }
 
 function generateSynthesisMarkdown() {
+  // Sélection : projet et/ou produit
   var select = document.getElementById('synthesis-project-select');
-  var projectId = select ? parseInt(select.value) : null;
-  if (!projectId) {
-    showToast(t('synthesisNoProject'), 'error');
+  var catSelect = document.getElementById('synthesis-category-select');
+  var projectId = (select && select.value) ? parseInt(select.value) : null;
+  var productName = (catSelect && catSelect.value) ? catSelect.value : null;
+  if (!projectId && !productName) {
+    showToast(t('synthesisNoSelection'), 'error');
     return;
   }
-  var project = projects.find(function(p) { return p.id === projectId; });
-  if (!project) return;
+  var project = projectId ? projects.find(function(p) { return p.id === projectId; }) : null;
 
-  // Filtrer les tâches du projet
-  var projectTasks = tasks.filter(function(tk) { return tk.Project_Id === projectId; });
+  // Filtrer les tâches du projet et/ou du produit
+  var projectTasks = tasks.filter(function(tk) {
+    if (projectId && tk.Project_Id !== projectId) return false;
+    if (productName && String(tk.Category || '').trim() !== productName) return false;
+    return true;
+  });
   if (projectTasks.length === 0) {
     showToast(t('synthesisNoTasks'), 'info');
     return;
@@ -11848,9 +11950,12 @@ function generateSynthesisMarkdown() {
   var toComplete = t('synthesisToComplete');
   var now = Math.floor(Date.now() / 1000);
 
-  // Construire le tableau Markdown
-  var md = '# ' + (currentLang === 'fr' ? 'Tableau de Pilotage Détaillé' : 'Detailed Project Dashboard') + ' — ' + project.Name + '\n\n';
-  if (project.Description) md += '> ' + project.Description + '\n\n';
+  // Titre : projet, produit ou les deux
+  var productLabel = (currentLang === 'fr' ? 'Produit : ' : 'Product: ') + productName;
+  var scopeName = project ? project.Name : '';
+  if (productName) scopeName = scopeName ? scopeName + ' / ' + productLabel : productLabel;
+  var md = '# ' + (currentLang === 'fr' ? 'Tableau de Pilotage Détaillé' : 'Detailed Project Dashboard') + ' — ' + scopeName + '\n\n';
+  if (project && project.Description) md += '> ' + project.Description + '\n\n';
   md += '| ' + t('synthesisPhase') + ' | ' + t('synthesisProgress') + ' | ' + t('synthesisActions') + ' | ' + t('synthesisPrereq') + ' | ' + t('synthesisActors') + ' | ' + t('synthesisAlerts') + ' | ' + t('synthesisDate') + ' |\n';
   md += '|-------|---|-------------|------------|---------|---------|------------------------------|\n';
 
@@ -11883,7 +11988,16 @@ function generateSynthesisMarkdown() {
     // Colonnes à compléter
     var prereqTech = toComplete;
     var prereqUser = toComplete;
-    var actors = task.Assignee ? task.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : toComplete;
+    // Acteurs : responsables de la tâche, de ses sous-tâches et de ses DoD,
+    // avec leur rôle, une seule occurrence par personne
+    var taskActors = getSynthesisTaskActors(task);
+    var actors = taskActors.length > 0
+      ? taskActors.map(function(a) {
+          var label = sanitize(a.name);
+          if (a.role) label += ' — ' + sanitize(a.role);
+          return label;
+        }).join('<br>')
+      : toComplete;
     var alerts = '';
 
     // Alertes : tâche en retard
@@ -12103,9 +12217,18 @@ function buildPPTTableHTML(pageNum) {
     // Prérequis (à compléter)
     html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;color:#94a3b8;vertical-align:top;">' + sanitize(toComplete) + '</td>';
 
-    // Acteurs
-    var actorsText = task.Assignee ? task.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : toComplete;
-    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;vertical-align:top;">' + sanitize(actorsText) + '</td>';
+    // Acteurs : responsables de la tâche, de ses sous-tâches et de ses DoD,
+    // avec leur rôle, une seule occurrence par personne
+    var taskActorsList = getSynthesisTaskActors(task);
+    var actorsText = '';
+    if (taskActorsList.length > 0) {
+      actorsText = taskActorsList.map(function(a) {
+        return sanitize(a.name) + (a.role ? ' — ' + sanitize(a.role) : '');
+      }).join('<br>');
+    } else {
+      actorsText = '<span style="color:#94a3b8;">' + sanitize(toComplete) + '</span>';
+    }
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;vertical-align:top;">' + actorsText + '</td>';
 
     // Alertes
     var alertsHtml = '';
@@ -12139,9 +12262,11 @@ function downloadSynthesisMarkdown() {
   var textarea = document.getElementById('synthesis-markdown');
   if (!textarea || !textarea.value) return;
   var select = document.getElementById('synthesis-project-select');
-  var projectId = select ? select.value : 'projet';
-  var project = projects.find(function(p) { return p.id === parseInt(projectId); });
-  var filename = 'synthese-' + (project ? project.Name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'projet') + '.md';
+  var catSelect = document.getElementById('synthesis-category-select');
+  var project = (select && select.value) ? projects.find(function(p) { return p.id === parseInt(select.value); }) : null;
+  var productName = (catSelect && catSelect.value) ? catSelect.value : null;
+  var baseName = project ? project.Name : (productName || 'projet');
+  var filename = 'synthese-' + baseName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.md';
 
   var blob = new Blob([textarea.value], { type: 'text/markdown;charset=utf-8' });
   var url = URL.createObjectURL(blob);
@@ -12170,13 +12295,16 @@ function mermaidDate(epochSec) {
 // Échappe les caractères spéciaux pour Mermaid (évite les problèmes de parsing)
 function mermaidEscape(text) {
   if (!text) return '';
+  // Les libellés du Gantt sont rendus en texte SVG : les entités HTML
+  // (&#58; etc.) s'affichent littéralement. On remplace les caractères
+  // sensibles par leurs équivalents pleine largeur, sûrs pour la syntaxe.
   return String(text)
-    .replace(/:/g, '&#58;')   // deux-points
-    .replace(/,/g, '&#44;')   // virgule
-    .replace(/;/g, '&#59;')   // point-virgule
-    .replace(/\[/g, '&#91;')  // crochet ouvrant
-    .replace(/\]/g, '&#93;')  // crochet fermant
-    .replace(/\n/g, ' ');     // saut de ligne
+    .replace(/:/g, '：')   // deux-points
+    .replace(/,/g, '，')   // virgule
+    .replace(/;/g, '；')   // point-virgule
+    .replace(/\[/g, '［')  // crochet ouvrant
+    .replace(/\]/g, '］')  // crochet fermant
+    .replace(/\n/g, ' ');  // saut de ligne
 }
 
 // Génère le diagramme de Gantt au format Mermaid
@@ -12190,12 +12318,14 @@ function generateMermaidGantt() {
   var project = projects.find(function(p) { return p.id === projectId; });
   if (!project) return;
 
-  // Filtrer les tâches du projet avec des dates
-  var projectTasks = tasks.filter(function(tk) {
+  // Filtrer les tâches du projet avec des dates, en excluant les terminées :
+  // le Gantt ne montre que le reste à faire et les tâches en cours
+  var datedTasks = tasks.filter(function(tk) {
     return tk.Project_Id === projectId && (tk.Start_Date || tk.Due_Date);
   });
+  var projectTasks = datedTasks.filter(function(tk) { return tk.Status !== 'done'; });
   if (projectTasks.length === 0) {
-    showToast(t('synthesisMermaidNoTasks'), 'info');
+    showToast(datedTasks.length > 0 ? t('synthesisMermaidAllDone') : t('synthesisMermaidNoTasks'), 'info');
     return;
   }
 
@@ -12223,8 +12353,10 @@ function generateMermaidGantt() {
     var startDate = mermaidDate(task.Start_Date || task.Due_Date);
     var endDate = mermaidDate(task.Due_Date || task.Start_Date);
 
-    // Récupérer les sous-tâches et jalons
-    var taskSubtasks = getTaskSubtasks(task.id);
+    // Sous-tâches et jalons : exclure aussi les terminés
+    var taskSubtasks = getTaskSubtasks(task.id).filter(function(st) {
+      return !st.Completed && st.Status !== 'done';
+    });
     var milestones = taskSubtasks.filter(function(st) { return isMilestone(st); });
     var subtasksOnly = taskSubtasks.filter(function(st) { return !isMilestone(st); });
 
@@ -12362,7 +12494,14 @@ async function copyMermaidGanttAsImage() {
       securityLevel: 'loose',
       gantt: {
         axisFormat: '%d/%m/%Y',
-        fontFamily: 'Calibri, Arial, sans-serif'
+        fontFamily: 'Calibri, Arial, sans-serif',
+        // Polices agrandies pour un diagramme lisible une fois collé dans un document
+        fontSize: 18,
+        sectionFontSize: 15,
+        barHeight: 26,
+        // Largeur fixe et largeur naturelle : évite le rétrécissement dans le conteneur
+        useWidth: 2400,
+        useMaxWidth: false
       }
     });
 
@@ -12371,10 +12510,20 @@ async function copyMermaidGanttAsImage() {
     var renderResult = await mermaid.render(renderId, textarea.value);
     container.innerHTML = renderResult.svg;
 
+    // Agrandir les dates de l'axe temporel (elles sont petites par défaut
+    // et la config mermaid n'expose pas leur taille)
+    var svgEl = container.querySelector('svg');
+    if (svgEl) {
+      var axisTexts = svgEl.querySelectorAll('.grid text, .tick text');
+      for (var at = 0; at < axisTexts.length; at++) {
+        axisTexts[at].style.setProperty('font-size', '20px', 'important');
+      }
+    }
+
     // Capturer avec html2canvas
     var canvas = await html2canvas(container, {
       backgroundColor: '#ffffff',
-      scale: 3,
+      scale: 4,
       logging: false,
       useCORS: false
     });
@@ -12387,13 +12536,19 @@ async function copyMermaidGanttAsImage() {
       }, 'image/png');
     });
 
-    // Copier dans le presse-papiers
+    // Copier dans le presse-papiers. L'écriture peut être refusée dans un
+    // iframe (permission clipboard-write) : on télécharge alors l'image.
+    var copied = false;
     if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-      var item = new ClipboardItem({ 'image/png': blob });
-      await navigator.clipboard.write([item]);
-      showToast(t('synthesisImageCopied'), 'success');
-    } else {
-      // Fallback : télécharger l'image
+      try {
+        var item = new ClipboardItem({ 'image/png': blob });
+        await navigator.clipboard.write([item]);
+        copied = true;
+      } catch (clipErr) {
+        console.warn('Presse-papiers indisponible, téléchargement de l\'image :', clipErr);
+      }
+    }
+    if (!copied) {
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
@@ -12402,6 +12557,8 @@ async function copyMermaidGanttAsImage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      showToast(t('synthesisImageDownloaded'), 'info');
+    } else {
       showToast(t('synthesisImageCopied'), 'success');
     }
   } catch (e) {

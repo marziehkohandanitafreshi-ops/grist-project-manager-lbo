@@ -4093,7 +4093,7 @@
           <p data-i18n="appSubtitle">Organisez et suivez vos tâches avec le tableau Kanban ou la vue tableau</p>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
-          <input type="text" id="global-search" class="global-search" placeholder="Rechercher..." data-i18n-placeholder="globalSearchPlaceholder" oninput="globalSearch(this.value)" />
+          <input type="text" id="global-search" class="global-search" placeholder="Rechercher..." data-i18n-placeholder="globalSearchPlaceholder" oninput="globalSearchDebounced(this.value)" />
           <button class="btn-icon-header" id="notifications-btn" onclick="showNotifications()" title="Alertes">🔔<span class="notif-badge" id="notif-badge"></span></button>
           <button class="btn-icon-header" onclick="toggleDarkMode()" title="Mode sombre">🌙</button>
           <button class="btn-icon-header" onclick="exportTasks('csv')" title="Export CSV">📥</button>
@@ -4176,7 +4176,7 @@
       <div class="table-filters">
         <button class="btn-secondary btn-sm" onclick="expandAllSubtasks()" title="Tout déplier">⊞</button>
         <button class="btn-secondary btn-sm" onclick="collapseAllSubtasks()" title="Tout replier">⊟</button>
-        <input type="text" id="table-search" placeholder="Rechercher une tâche..." data-i18n-placeholder="taskSearchPlaceholder" oninput="renderTableView()" />
+        <input type="text" id="table-search" placeholder="Rechercher une tâche..." data-i18n-placeholder="taskSearchPlaceholder" oninput="tableSearchDebounced()" />
         <div id="ms-status" class="filter-combo"></div>
         <div id="ms-priority" class="filter-combo"></div>
       </div>
@@ -4325,7 +4325,7 @@
         <button class="btn-new-task" onclick="openNewTemplateModal()">+ <span data-i18n="newTemplate">Nouveau modèle</span></button>
       </div>
       <div class="table-filters">
-        <input type="text" id="template-search" placeholder="Rechercher un modèle..." data-i18n-placeholder="templateSearchPlaceholder" oninput="renderTemplatesView()" />
+        <input type="text" id="template-search" placeholder="Rechercher un modèle..." data-i18n-placeholder="templateSearchPlaceholder" oninput="templateSearchDebounced()" />
         <select id="filter-template-priority" onchange="renderTemplatesView()">
           <option value="" data-i18n="allPriorities">Toutes priorités</option>
           <option value="high" data-i18n="priorityHigh">Haute</option>
@@ -4544,11 +4544,14 @@
     <div class="tab-content" id="tab-synthesis">
       <div class="section-title">
         <h2 data-i18n="tabSynthesis">Synthèse</h2>
-        <p data-i18n="synthesisSubtitle">Générez un tableau de pilotage détaillé par projet au format Markdown</p>
+        <p data-i18n="synthesisSubtitle">Générez un tableau de pilotage détaillé par projet ou par produit au format Markdown</p>
       </div>
       <div class="synthesis-controls" style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
         <select id="synthesis-project-select" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;min-width:250px;">
           <option value="" data-i18n="synthesisSelectProject">Sélectionner un projet</option>
+        </select>
+        <select id="synthesis-category-select" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;min-width:250px;">
+          <option value="" data-i18n="synthesisSelectProduct">Sélectionner un produit</option>
         </select>
         <button class="btn btn-primary" onclick="generateSynthesisMarkdown()" data-i18n="synthesisGenerate">Générer le Markdown</button>
         <button class="btn btn-secondary" onclick="generateMermaidGantt()" data-i18n="synthesisGanttMermaid">📊 Gantt Mermaid</button>
@@ -4561,7 +4564,6 @@
           <button class="btn btn-secondary btn-sm" onclick="downloadMermaidGantt()">💾 <span data-i18n="synthesisDownloadMermaid">Télécharger .mmd</span></button>
         </div>
         <textarea id="synthesis-mermaid-code" readonly style="width:100%;height:400px;font-family:monospace;font-size:12px;border:1px solid #e2e8f0;border-radius:8px;padding:12px;resize:vertical;box-sizing:border-box;background:#f8fafc;"></textarea>
-      </div>
       </div>
       <div id="synthesis-output" style="display:none;">
         <div style="display:flex;gap:8px;margin-bottom:12px;">
