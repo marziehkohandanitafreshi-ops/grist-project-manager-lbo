@@ -215,6 +215,7 @@ var i18n = {
     synthesisCopyImage: 'Copier image',
     synthesisImageCopied: 'Image Gantt copiée — collez dans PowerPoint !',
     synthesisImageError: 'Erreur génération image, réessayez',
+    synthesisImageDownloaded: 'Presse-papiers indisponible — image Gantt téléchargée',
     synthesisImageGenerating: 'Génération de l\'image en cours...',
     teamUsersTitle: 'Utilisateurs',
     teamUsersSubtitle: 'Gérez les membres de votre équipe',
@@ -609,6 +610,7 @@ var i18n = {
     synthesisCopyImage: 'Copy image',
     synthesisImageCopied: 'Gantt image copied — paste into PowerPoint!',
     synthesisImageError: 'Image generation error, please retry',
+    synthesisImageDownloaded: 'Clipboard unavailable — Gantt image downloaded',
     synthesisImageGenerating: 'Generating image...',
     teamUsersTitle: 'Users',
     teamUsersSubtitle: 'Manage your team members',
@@ -12491,13 +12493,19 @@ async function copyMermaidGanttAsImage() {
       }, 'image/png');
     });
 
-    // Copier dans le presse-papiers
+    // Copier dans le presse-papiers. L'écriture peut être refusée dans un
+    // iframe (permission clipboard-write) : on télécharge alors l'image.
+    var copied = false;
     if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-      var item = new ClipboardItem({ 'image/png': blob });
-      await navigator.clipboard.write([item]);
-      showToast(t('synthesisImageCopied'), 'success');
-    } else {
-      // Fallback : télécharger l'image
+      try {
+        var item = new ClipboardItem({ 'image/png': blob });
+        await navigator.clipboard.write([item]);
+        copied = true;
+      } catch (clipErr) {
+        console.warn('Presse-papiers indisponible, téléchargement de l\'image :', clipErr);
+      }
+    }
+    if (!copied) {
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
@@ -12506,6 +12514,8 @@ async function copyMermaidGanttAsImage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      showToast(t('synthesisImageDownloaded'), 'info');
+    } else {
       showToast(t('synthesisImageCopied'), 'success');
     }
   } catch (e) {
