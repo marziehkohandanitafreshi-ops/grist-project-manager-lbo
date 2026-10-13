@@ -12140,9 +12140,18 @@ function buildPPTTableHTML(pageNum) {
     // Prérequis (à compléter)
     html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;color:#94a3b8;vertical-align:top;">' + sanitize(toComplete) + '</td>';
 
-    // Acteurs
-    var actorsText = task.Assignee ? task.Assignee.split(',').map(function(a) { return getUserDisplayName(a.trim()); }).join(', ') : toComplete;
-    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;vertical-align:top;">' + sanitize(actorsText) + '</td>';
+    // Acteurs : responsables de la tâche, de ses sous-tâches et de ses DoD,
+    // avec leur rôle, une seule occurrence par personne
+    var taskActorsList = getSynthesisTaskActors(task);
+    var actorsText = '';
+    if (taskActorsList.length > 0) {
+      actorsText = taskActorsList.map(function(a) {
+        return sanitize(a.name) + (a.role ? ' — ' + sanitize(a.role) : '');
+      }).join('<br>');
+    } else {
+      actorsText = '<span style="color:#94a3b8;">' + sanitize(toComplete) + '</span>';
+    }
+    html += '<td style="border:1px solid #e2e8f0;padding:6px 8px;vertical-align:top;">' + actorsText + '</td>';
 
     // Alertes
     var alertsHtml = '';
