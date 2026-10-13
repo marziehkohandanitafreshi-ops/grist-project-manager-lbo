@@ -11934,13 +11934,9 @@ function generateSynthesisMarkdown() {
     return;
   }
 
-  // Trier les tâches par date de début ou ordre de création
-  projectTasks.sort(function(a, b) {
-    var da = a.Start_Date || a.Created_At || 0;
-    var db = b.Start_Date || b.Created_At || 0;
-    return da - db;
-  });
-
+  // Conserver l'ordre naturel de la table Grist (même ordre que les onglets
+  // Tableau et Gantt) : le tri par Start_Date déplaçait les phases sans date
+  // de début (fallbacks Created_At / 0) et désordonnait la synthèse.
 
   // Initialiser la pagination PPT
   synthesisProjectTasks = projectTasks;
@@ -12329,13 +12325,8 @@ function generateMermaidGantt() {
     return;
   }
 
-  // Trier par date de début
-  projectTasks.sort(function(a, b) {
-    var da = a.Start_Date || a.Due_Date || 0;
-    var db = b.Start_Date || b.Due_Date || 0;
-    return da - db;
-  });
-
+  // Conserver l'ordre naturel de la table Grist (même ordre que les onglets
+  // Tableau et Gantt) pour garder les phases dans le bon ordre.
   // Construire le code Mermaid
   var md = 'gantt\n';
   md += '    title ' + mermaidEscape(project.Name) + '\n';
