@@ -210,6 +210,7 @@ var i18n = {
     synthesisDownloadMermaid: 'Télécharger .mmd',
     synthesisMermaidCopied: 'Code Mermaid copié !',
     synthesisMermaidNoTasks: 'Aucune tâche avec des dates dans ce projet',
+    synthesisMermaidAllDone: 'Aucune tâche à afficher : toutes sont terminées',
     synthesisMermaidGenerated: 'Gantt Mermaid généré',
     synthesisCopyImage: 'Copier image',
     synthesisImageCopied: 'Image Gantt copiée — collez dans PowerPoint !',
@@ -603,6 +604,7 @@ var i18n = {
     synthesisDownloadMermaid: 'Download .mmd',
     synthesisMermaidCopied: 'Mermaid code copied!',
     synthesisMermaidNoTasks: 'No tasks with dates in this project',
+    synthesisMermaidAllDone: 'Nothing to display: all tasks are completed',
     synthesisMermaidGenerated: 'Mermaid Gantt generated',
     synthesisCopyImage: 'Copy image',
     synthesisImageCopied: 'Gantt image copied — paste into PowerPoint!',
@@ -12268,12 +12270,14 @@ function generateMermaidGantt() {
   var project = projects.find(function(p) { return p.id === projectId; });
   if (!project) return;
 
-  // Filtrer les tâches du projet avec des dates
-  var projectTasks = tasks.filter(function(tk) {
+  // Filtrer les tâches du projet avec des dates, en excluant les terminées :
+  // le Gantt ne montre que le reste à faire et les tâches en cours
+  var datedTasks = tasks.filter(function(tk) {
     return tk.Project_Id === projectId && (tk.Start_Date || tk.Due_Date);
   });
+  var projectTasks = datedTasks.filter(function(tk) { return tk.Status !== 'done'; });
   if (projectTasks.length === 0) {
-    showToast(t('synthesisMermaidNoTasks'), 'info');
+    showToast(datedTasks.length > 0 ? t('synthesisMermaidAllDone') : t('synthesisMermaidNoTasks'), 'info');
     return;
   }
 
@@ -12301,8 +12305,10 @@ function generateMermaidGantt() {
     var startDate = mermaidDate(task.Start_Date || task.Due_Date);
     var endDate = mermaidDate(task.Due_Date || task.Start_Date);
 
-    // Récupérer les sous-tâches et jalons
-    var taskSubtasks = getTaskSubtasks(task.id);
+    // Sous-tâches et jalons : exclure aussi les terminés
+    var taskSubtasks = getTaskSubtasks(task.id).filter(function(st) {
+      return !st.Completed && st.Status !== 'done';
+    });
     var milestones = taskSubtasks.filter(function(st) { return isMilestone(st); });
     var subtasksOnly = taskSubtasks.filter(function(st) { return !isMilestone(st); });
 
@@ -12440,7 +12446,14 @@ async function copyMermaidGanttAsImage() {
       securityLevel: 'loose',
       gantt: {
         axisFormat: '%d/%m/%Y',
-        fontFamily: 'Calibri, Arial, sans-serif'
+        fontFamily: 'Calibri, Arial, sans-serif',
+        // Polices agrandies pour un diagramme lisible une fois collé dans un document
+        fontSize: 18,
+        sectionFontSize: 15,
+        barHeight: 26,
+        // Largeur fixe et largeur naturelle : évite le rétrécissement dans le conteneur
+        useWidth: 2400,
+        useMaxWidth: false
       }
     });
 
@@ -12452,7 +12465,7 @@ async function copyMermaidGanttAsImage() {
     // Capturer avec html2canvas
     var canvas = await html2canvas(container, {
       backgroundColor: '#ffffff',
-      scale: 3,
+      scale: 4,
       logging: false,
       useCORS: false
     });
