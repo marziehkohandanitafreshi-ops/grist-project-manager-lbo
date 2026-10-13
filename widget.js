@@ -12250,13 +12250,16 @@ function mermaidDate(epochSec) {
 // Échappe les caractères spéciaux pour Mermaid (évite les problèmes de parsing)
 function mermaidEscape(text) {
   if (!text) return '';
+  // Les libellés du Gantt sont rendus en texte SVG : les entités HTML
+  // (&#58; etc.) s'affichent littéralement. On remplace les caractères
+  // sensibles par leurs équivalents pleine largeur, sûrs pour la syntaxe.
   return String(text)
-    .replace(/:/g, '&#58;')   // deux-points
-    .replace(/,/g, '&#44;')   // virgule
-    .replace(/;/g, '&#59;')   // point-virgule
-    .replace(/\[/g, '&#91;')  // crochet ouvrant
-    .replace(/\]/g, '&#93;')  // crochet fermant
-    .replace(/\n/g, ' ');     // saut de ligne
+    .replace(/:/g, '：')   // deux-points
+    .replace(/,/g, '，')   // virgule
+    .replace(/;/g, '；')   // point-virgule
+    .replace(/\[/g, '［')  // crochet ouvrant
+    .replace(/\]/g, '］')  // crochet fermant
+    .replace(/\n/g, ' ');  // saut de ligne
 }
 
 // Génère le diagramme de Gantt au format Mermaid
