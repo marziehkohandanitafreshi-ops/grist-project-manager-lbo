@@ -4544,11 +4544,14 @@
     <div class="tab-content" id="tab-synthesis">
       <div class="section-title">
         <h2 data-i18n="tabSynthesis">Synthèse</h2>
-        <p data-i18n="synthesisSubtitle">Générez un tableau de pilotage détaillé par projet au format Markdown</p>
+        <p data-i18n="synthesisSubtitle">Générez un tableau de pilotage détaillé par projet ou par produit au format Markdown</p>
       </div>
       <div class="synthesis-controls" style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
         <select id="synthesis-project-select" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;min-width:250px;">
           <option value="" data-i18n="synthesisSelectProject">Sélectionner un projet</option>
+        </select>
+        <select id="synthesis-category-select" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;min-width:250px;">
+          <option value="" data-i18n="synthesisSelectProduct">Sélectionner un produit</option>
         </select>
         <button class="btn btn-primary" onclick="generateSynthesisMarkdown()" data-i18n="synthesisGenerate">Générer le Markdown</button>
         <button class="btn btn-secondary" onclick="generateMermaidGantt()" data-i18n="synthesisGanttMermaid">📊 Gantt Mermaid</button>
