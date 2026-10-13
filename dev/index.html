@@ -4108,6 +4108,7 @@
           <button class="tab-btn active" data-tab="calendar" onclick="switchTab('calendar')">📅 <span data-i18n="tabCalendar">Calendrier</span></button>
           <button class="tab-btn" data-tab="kanban" onclick="switchTab('kanban')">📋 <span data-i18n="tabKanban">Kanban</span></button>
           <button class="tab-btn" data-tab="table" onclick="switchTab('table')">📊 <span data-i18n="tabTable">Tableau</span></button>
+          <button class="tab-btn" data-tab="synthese" onclick="switchTab('synthese')">📑 <span data-i18n="tabSynthese">Synthèse</span></button>
           <button class="tab-btn" data-tab="gantt" onclick="switchTab('gantt')">📐 <span data-i18n="tabGantt">Gantt</span></button>
           <button class="tab-btn" data-tab="templates" onclick="switchTab('templates')">🎨 <span data-i18n="tabTemplates">Templates</span></button>
           <button class="tab-btn" data-tab="stats" onclick="switchTab('stats')">📈 <span data-i18n="tabStats">Stats</span></button>
@@ -4181,6 +4182,15 @@
         <div id="ms-priority" class="filter-combo"></div>
       </div>
       <div id="table-view"></div>
+    </div>
+
+    <!-- TAB: SYNTHESE -->
+    <div class="tab-content" id="tab-synthese">
+      <div class="section-title">
+        <h2 data-i18n="syntheseTitle">Synthèse</h2>
+        <p data-i18n="syntheseSubtitle">Rôles des responsables de tâches, sous-tâches et DoD</p>
+      </div>
+      <div id="synthese-list"></div>
     </div>
 
     <!-- TAB: GANTT -->
